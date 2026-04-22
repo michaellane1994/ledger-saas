@@ -148,7 +148,6 @@ body.demo-mode .demo-pill-sidebar{display:inline-block;}
 [data-theme="dark"] .savings-badge{background:#2a1a02;color:#dba050;}
 [data-theme="dark"] .setup-banner{background:#2a1f08;border-color:#7c4e1a;}
 [data-theme="dark"] .setup-banner-text{color:#d4a870;}
-[data-theme="dark"] #apps-script-code{background:#0d1117;color:#c9d1d9;}
 [data-theme="dark"] input[type="text"],
 [data-theme="dark"] input[type="url"]{background:var(--bg);color:var(--ink);border-color:var(--border);}
 .theme-picker{display:flex;flex-wrap:wrap;gap:10px;}.theme-option{cursor:pointer;text-align:center;}
@@ -729,7 +728,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
       <div id="demo-hero" class="demo-hero" style="display:none;">
         <button class="demo-hero-dismiss" onclick="dismissDemoHero()" title="Hide" aria-label="Dismiss">&times;</button>
         <h2>An expense tracker that never sees your data.</h2>
-        <p class="sub">Ledger lives in your browser. Your transactions sync to your own Google Sheet — not to us. Built for households that want clarity without handing over their finances. Need help getting started? Click the <strong>?</strong> button in the top bar.</p>
+        <p class="sub">Ledger lives in your browser. Your transactions sync to your own Google Drive — not to us. Built for households that want clarity without handing over their finances. Need help getting started? Click the <strong>?</strong> button in the top bar.</p>
         <div class="demo-hero-pills">
           <span class="demo-hero-pill">🔒 Private by architecture</span>
           <span class="demo-hero-pill">📄 Your data in your Drive</span>
@@ -747,7 +746,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
         <div style="flex:1;min-width:260px;">
           <div style="font-family:'Playfair Display',serif;font-size:19px;margin-bottom:6px;">Welcome to Expense Tracker 👋</div>
           <div style="font-size:13px;opacity:.85;line-height:1.6;max-width:520px;">
-            New here? Click <strong>Load sample data</strong> to explore with a pre-filled dataset. Or start fresh by uploading a CSV/PDF or adding a transaction manually. Head to <strong>Settings</strong> to customise categories and connect Google Sheets for sync across devices.
+            New here? Click <strong>Load sample data</strong> to explore with a pre-filled dataset. Or start fresh by uploading a CSV/PDF or adding a transaction manually. Head to <strong>Settings</strong> to customise categories and connect Google Drive for sync across devices.
           </div>
         </div>
         <div style="display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;">
@@ -1253,188 +1252,22 @@ tbody tr:hover .row-menu-btn{opacity:1;}
       </div>
 
       <div class="card" style="margin-bottom:18px;">
-        <div class="card-head" onclick="toggleSettingsSec('sheets')" style="cursor:pointer;">
-          <div class="card-title">Google Sheets Sync <span style="font-size:11px;color:var(--faint);font-weight:400;text-transform:uppercase;letter-spacing:.5px;">(legacy)</span></div>
-          <span class="sec-toggle" id="chev-sheets">▾</span>
+        <div class="card-head" onclick="toggleSettingsSec('tools')" style="cursor:pointer;">
+          <div class="card-title">Data Tools</div>
+          <span class="sec-toggle" id="chev-tools">▾</span>
         </div>
-        <div class="card-body sec-body" id="sec-sheets">
-          <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">
-            Legacy sync via Apps Script. Superseded by Cloud Sync above.
-          </p>
-          <div style="display:flex;gap:10px;align-items:flex-end;" id="sheets-url-row">
-            <div style="flex:1;">
-              <label style="font-size:11.5px;color:var(--muted);display:block;margin-bottom:4px;font-weight:500;">Google Apps Script Web App URL</label>
-              <input type="text" id="sheets-url" placeholder="https://script.google.com/macros/s/..."
-                style="width:100%;padding:8px 11px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Inter',sans-serif;outline:none;background:var(--bg);color:var(--ink);">
-            </div>
-            <button class="btn btn-primary" id="sheets-connect-btn" onclick="saveSheetUrl()">Connect</button>
-            <button class="btn btn-ghost" id="sheets-test-btn" onclick="testConnection()">Test</button>
-          </div>
-          <div id="conn-status" style="margin-top:10px;font-size:12.5px;"></div>
-          <div class="demo-lock-chip" onclick="openPricingModal()">🔒 Sign up to enable sync →</div>
-        </div>
-      </div>
-
-      <div class="card" style="margin-bottom:18px;">
-        <div class="card-head" onclick="toggleSettingsSec('sync')" style="cursor:pointer;">
-          <div class="card-title">Google Sheet Sync Controls</div>
-          <span class="sec-toggle" id="chev-sync">▾</span>
-        </div>
-        <div class="card-body sec-body" id="sec-sync">
+        <div class="card-body sec-body" id="sec-tools">
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <button class="btn btn-primary" id="sheets-push-btn" onclick="syncToSheets()">↑ Push to Google Sheets</button>
-            <button class="btn btn-ghost" id="sheets-pull-btn" onclick="syncFromSheets()">↓ Pull from Google Sheets</button>
             <button class="btn btn-ghost" onclick="loadSampleData()">✨ Load sample data</button>
             <button class="btn btn-ghost btn-danger" onclick="clearLocalData()">✕ Clear local data</button>
           </div>
-          <div class="demo-lock-chip" onclick="openPricingModal()">🔒 Sign up to enable Push / Pull →</div>
           <p style="font-size:12px;color:var(--faint);margin-top:10px;line-height:1.6;">
-            <strong>Push</strong> sends all local data to the sheet — always do this after making changes.<br>
-            <strong>Pull</strong> replaces all local data with what is in the sheet — use when switching devices.<br>
             <strong>Load sample data</strong> replaces local data with a pre-filled demo dataset so you can explore the app.<br>
-            <strong>Clear local data</strong> wipes this device only — your sheet data is unaffected.
+            <strong>Clear local data</strong> wipes this device only — your Drive file is unaffected.
           </p>
         </div>
       </div>
 
-      <div class="card" style="margin-bottom:18px;">
-        <div class="card-head" onclick="toggleSettingsSec('setup')" style="cursor:pointer;">
-          <div class="card-title">Google Sheets Setup Guide</div>
-          <span class="sec-toggle" id="chev-setup">&#9662;</span>
-        </div>
-        <div class="card-body sec-body" id="sec-setup">
-          <div style="font-size:13px;color:var(--muted);line-height:1.8;">
-            <p style="margin-bottom:12px;"><strong>Quick setup</strong> — uses our pre-built template (~2 min):</p>
-            <ol style="padding-left:18px;display:flex;flex-direction:column;gap:10px;">
-              <li>
-                <a href="https://docs.google.com/spreadsheets/d/1TjxjnXlV-XprxD3aKkS8dP8xL6ZhaTgWSRRxtooUvfw/copy" target="_blank" rel="noopener" class="btn btn-primary btn-sm" style="display:inline-block;margin:2px 0;">📄 Copy Ledger template to your Drive</a>
-                <div style="font-size:12px;color:var(--faint);margin-top:4px;">Creates a copy in your own Google Drive with the Apps Script code already included. Nothing is shared with us.</div>
-              </li>
-              <li>Open the copied sheet, then click <strong>Extensions → Apps Script</strong>.</li>
-              <li>In the Apps Script editor, click <strong>Deploy → New deployment</strong>. Type: <strong>Web app</strong>. Execute as: <strong>Me</strong>. Access: <strong>Anyone</strong>. Click Deploy and authorize when prompted.</li>
-              <li>Copy the <strong>Web app URL</strong> it gives you and paste it into the field above.</li>
-              <li>Click <strong>Connect</strong>, then <strong>Push to Google Sheets</strong> to do your first sync.</li>
-            </ol>
-
-            <details style="margin-top:22px;border-top:1px solid var(--border);padding-top:14px;">
-              <summary style="cursor:pointer;font-size:12px;color:var(--faint);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Advanced — build from scratch without the template</summary>
-              <div style="margin-top:14px;">
-            <p style="margin-bottom:12px;">Prefer to build the sheet yourself? Follow these steps:</p>
-            <ol style="padding-left:18px;display:flex;flex-direction:column;gap:10px;">
-              <li>Go to <strong>sheets.google.com</strong> and create a new blank spreadsheet. Name it <em>Ledger</em>.</li>
-              <li>Click <strong>Extensions → Apps Script</strong> in the menu bar.</li>
-              <li>Delete any existing code in the editor, then paste in the Apps Script code below.</li>
-              <li>Click <strong>Save</strong> (the floppy disk icon), then click <strong>Deploy → New deployment</strong>.</li>
-              <li>Set type to <strong>Web app</strong>. Set "Execute as" to <strong>Me</strong> and "Who has access" to <strong>Anyone</strong>. Click Deploy.</li>
-              <li>Copy the <strong>Web app URL</strong> it gives you and paste it into the field above.</li>
-              <li>Click <strong>Connect</strong>, then <strong>Push to Google Sheets</strong> to do your first sync.</li>
-            </ol>
-            <div style="margin-top:18px;">
-              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--faint);font-weight:600;margin-bottom:8px;">Apps Script Code — paste this into the editor</div>
-              <div style="position:relative;">
-                <pre id="apps-script-code" style="background:#0d1117;color:#c9d1d9;padding:16px;border-radius:var(--radius-sm);font-size:11.5px;line-height:1.7;overflow-x:auto;white-space:pre-wrap;">const SHEET_NAME = 'Transactions';
-const LEARNED_SHEET = 'Learned';
-const INCOME_SHEET = 'Income';
-const SAVINGS_SHEET = 'Savings';
-const CONTRIB_SHEET = 'Contributions';
-const UPLOADS_SHEET = 'Uploads';
-const CATS_SHEET = 'Categories';
-const SETTINGS_SHEET = 'Settings';
-
-function doPost(e) {
-  const lock = LockService.getScriptLock();
-  lock.tryLock(10000);
-  try {
-    const data = JSON.parse(e.postData.contents);
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-
-    if (data.action === 'push') {
-      writeSheet(ss, SHEET_NAME, ['id','date','merchant','amount','category','person','card','note','refund','manual','incomeType','savingsAccountId','incomeCategory','needs'],
-        (data.txns||[]).map(t => [t.id,t.date,t.merchant,t.amount,t.category,t.person||'',t.card||'',t.note||'',t.refund?'true':'false',t.manual?'true':'false',t.incomeType||'',t.savingsAccountId||'',t.incomeCategory||'',t.needs===true?'true':t.needs===false?'false':'']));
-      writeSheet(ss, LEARNED_SHEET, ['merchant','category'],
-        Object.entries(data.learned||{}).map(([m,c]) => [m,c]));
-      writeSheet(ss, INCOME_SHEET, ['id','date','amount','type','person','desc','note','fromTxnId','category'],
-        (data.incomes||[]).map(i => [i.id,i.date,i.amount,i.type,i.person||'',i.desc||'',i.note||'',i.fromTxnId||'',i.category||'']));
-      writeSheet(ss, SAVINGS_SHEET, ['id','name','type','person','balance','baseBalance','goal'],
-        (data.savAccts||[]).map(a => [a.id,a.name,a.type,a.person||'',a.balance||0,a.baseBalance||0,a.goal||'']));
-      writeSheet(ss, CONTRIB_SHEET, ['id','date','amount','accountId','type','person','note','fromTxnId'],
-        (data.contribs||[]).map(c => [c.id,c.date,c.amount,c.accountId,c.type,c.person||'',c.note||'',c.fromTxnId||'']));
-      writeSheet(ss, CATS_SHEET, ['key','label','color','fixed','budget','keywords'],
-        (data.cats||[]).map(c => [c.key,c.label,c.color,c.fixed?'true':'false',c.budget||0,JSON.stringify(c.kw||[])]));
-      const settings = data.settings || {};
-      writeSheet(ss, SETTINGS_SHEET, ['key','value'],
-        Object.entries(settings).map(([k,v]) => [k, typeof v === 'string' ? v : JSON.stringify(v)]));
-      return buildResponse({ok:true, count:(data.txns||[]).length});
-    }
-
-    if (data.action === 'pull') {
-      const txns     = readSheet(ss, SHEET_NAME,   r => ({id:r.id,date:r.date,merchant:r.merchant,amount:parseFloat(r.amount)||0,category:r.category,person:r.person,card:r.card||'',note:r.note,refund:r.refund==='true',manual:r.manual==='true',incomeType:r.incomeType||undefined,savingsAccountId:r.savingsAccountId||undefined,incomeCategory:r.incomeCategory||undefined,needs:r.needs==='true'?true:r.needs==='false'?false:undefined}));
-      const learned  = {}; readSheet(ss, LEARNED_SHEET, r => r).forEach(r => { if(r.merchant) learned[r.merchant]=r.category; });
-      const incomes  = readSheet(ss, INCOME_SHEET,  r => ({id:r.id,date:r.date,amount:parseFloat(r.amount)||0,type:r.type,person:r.person,desc:r.desc,note:r.note,fromTxnId:r.fromTxnId||undefined,category:r.category||undefined}));
-      const savAccts = readSheet(ss, SAVINGS_SHEET, r => ({id:r.id,name:r.name,type:r.type,person:r.person,balance:parseFloat(r.balance)||0,baseBalance:parseFloat(r.baseBalance)||0,goal:r.goal?parseFloat(r.goal):null}));
-      const contribs = readSheet(ss, CONTRIB_SHEET, r => ({id:r.id,date:r.date,amount:parseFloat(r.amount)||0,accountId:r.accountId,type:r.type,person:r.person,note:r.note,fromTxnId:r.fromTxnId||undefined}));
-      const catsRaw = readSheet(ss, CATS_SHEET, r => { try { return {key:r.key,label:r.label,color:r.color,fixed:r.fixed==='true',budget:parseFloat(r.budget)||0,kw:JSON.parse(r.keywords||'[]')}; } catch(e) { return {key:r.key,label:r.label,color:r.color,fixed:r.fixed==='true',budget:parseFloat(r.budget)||0,kw:[]}; } });
-      const settingsRaw = readSheet(ss, SETTINGS_SHEET, r => r);
-      const settings = {};
-      settingsRaw.forEach(r => { if (r.key) { try { settings[r.key] = JSON.parse(r.value); } catch(e) { settings[r.key] = r.value; } } });
-      return buildResponse({ok:true, txns, learned, incomes, savAccts, contribs, cats:catsRaw.length?catsRaw:null, settings});
-    }
-
-    return buildResponse({ok:false, error:'Unknown action'});
-  } catch(err) {
-    return buildResponse({ok:false, error:err.toString()});
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-function writeSheet(ss, name, headers, rows) {
-  let sheet = ss.getSheetByName(name);
-  if (!sheet) sheet = ss.insertSheet(name);
-  sheet.clearContents();
-  const data = rows.length ? [headers, ...rows] : [headers];
-  sheet.getRange(1, 1, data.length, headers.length).setValues(data);
-}
-
-function readSheet(ss, name, mapper) {
-  const sheet = ss.getSheetByName(name);
-  if (!sheet) return [];
-  const rows = sheet.getDataRange().getValues();
-  if (rows.length < 2) return [];
-  const headers = rows[0];
-  return rows.slice(1).map(r => {
-    const obj = {};
-    headers.forEach((h,i) => {
-      const v = r[i];
-      // Convert Google Sheets Date objects to YYYY-MM-DD strings
-      if (v instanceof Date) {
-        const y = v.getFullYear();
-        const mo = String(v.getMonth()+1).padStart(2,'0');
-        const d = String(v.getDate()).padStart(2,'0');
-        obj[h] = y + '-' + mo + '-' + d;
-      } else {
-        obj[h] = v;
-      }
-    });
-    return mapper(obj);
-  }).filter(r => r.id || r.key);
-}
-
-function buildResponse(data) {
-  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
-}
-
-function doGet(e) {
-  return buildResponse({ok:true, status:'Ledger connected'});
-}</pre>
-                <button class="btn btn-ghost btn-sm" onclick="copyScript()" style="position:absolute;top:10px;right:10px;">Copy</button>
-              </div>
-            </div>
-              </div>
-            </details>
-          </div>
-        </div>
-      </div>
 
     </div>
 
@@ -1601,7 +1434,7 @@ function doGet(e) {
       <ul style="list-style:none;padding:0;margin:0 0 22px 0;display:flex;flex-direction:column;gap:9px;">
         <li style="display:flex;gap:9px;align-items:flex-start;font-size:13px;color:var(--ink);"><span style="color:#2d6a4f;flex-shrink:0;font-weight:700;">✓</span>Unlimited transactions, incomes, savings &amp; mortgages</li>
         <li style="display:flex;gap:9px;align-items:flex-start;font-size:13px;color:var(--ink);"><span style="color:#2d6a4f;flex-shrink:0;font-weight:700;">✓</span>CSV &amp; PDF imports with auto-categorization</li>
-        <li style="display:flex;gap:9px;align-items:flex-start;font-size:13px;color:var(--ink);"><span style="color:#2d6a4f;flex-shrink:0;font-weight:700;">✓</span>Google Sheets sync — your data in your Drive</li>
+        <li style="display:flex;gap:9px;align-items:flex-start;font-size:13px;color:var(--ink);"><span style="color:#2d6a4f;flex-shrink:0;font-weight:700;">✓</span>Google Drive sync — your data stays in your Drive</li>
         <li style="display:flex;gap:9px;align-items:flex-start;font-size:13px;color:var(--ink);"><span style="color:#2d6a4f;flex-shrink:0;font-weight:700;">✓</span>Budgets, trends, recurring detection</li>
         <li style="display:flex;gap:9px;align-items:flex-start;font-size:13px;color:var(--ink);"><span style="color:#2d6a4f;flex-shrink:0;font-weight:700;">✓</span>Dark mode &amp; mobile-ready</li>
       </ul>
@@ -1663,7 +1496,7 @@ function doGet(e) {
       <nav class="help-nav">
         <a href="#help-start">Quick start</a>
         <a href="#help-features">Features</a>
-        <a href="#help-sync">Google Sheets sync</a>
+        <a href="#help-sync">Google Drive sync</a>
         <a href="#help-faq">FAQ</a>
         <a href="#help-contact">Still stuck?</a>
       </nav>
@@ -1674,7 +1507,7 @@ function doGet(e) {
           <li><strong>Add your first transaction.</strong> Click the <em>＋ Add</em> button on Transactions, or hit <em>Upload Data</em> to bring in a CSV or PDF statement.</li>
           <li><strong>Review the preview.</strong> If you upload a statement, Ledger shows the parsed rows and a total so you can confirm it matches before importing.</li>
           <li><strong>Categorise.</strong> Ledger auto-categorises using keyword rules. You can edit categories inline — it learns from your corrections.</li>
-          <li><strong>Set up sync</strong> (optional). Connect a Google Sheet to back up and sync across devices. See the sync section below.</li>
+          <li><strong>Set up sync</strong> (optional). Connect Google Drive to back up and sync across devices. See the sync section below.</li>
         </ol>
       </section>
 
@@ -1694,29 +1527,27 @@ function doGet(e) {
       </section>
 
       <section id="help-sync">
-        <h3>Google Sheets sync</h3>
-        <p>Ledger does not store your transactions. If you want data to survive browser clears or sync across devices, connect your own Google Sheet.</p>
-        <p><strong>Quick version</strong> (~2 min):</p>
+        <h3>Google Drive sync</h3>
+        <p>Ledger does not store your transactions. If you want data to survive browser clears or sync across devices, connect Google Drive — Ledger saves a single JSON file (<code>ledger-data.json</code>) into your own Drive.</p>
+        <p><strong>How to connect</strong> (one click):</p>
         <ol class="help-steps">
-          <li><a href="https://docs.google.com/spreadsheets/d/1TjxjnXlV-XprxD3aKkS8dP8xL6ZhaTgWSRRxtooUvfw/copy" target="_blank" rel="noopener">Click here to copy the Ledger template</a> into your own Google Drive.</li>
-          <li>In the copied sheet, open <em>Extensions → Apps Script</em>.</li>
-          <li>Deploy as a Web App (Execute as: Me, Access: Anyone) and authorize.</li>
-          <li>Copy the deployment URL back into Ledger's settings and hit Connect.</li>
+          <li>Open <em>Settings → Cloud Sync (Google Drive)</em>.</li>
+          <li>Click <strong>Connect Google Drive</strong> and authorise Ledger on the Google consent screen.</li>
+          <li>Use <strong>Push</strong> to save your current data to Drive, and <strong>Pull</strong> on another device to load it.</li>
         </ol>
-        <p class="help-note">Full walkthrough (plus an "advanced: build from scratch" option) in <strong>Settings → Google Sheets Setup Guide</strong>.</p>
-        <p class="help-note" style="margin-top:10px;padding:10px 12px;background:var(--bg);border-left:3px solid var(--accent);border-radius:4px;"><strong>Important — who can access your data:</strong> Even though the Apps Script deployment is set to <em>Anyone</em> (required for the app to call it), that only means the URL doesn't require Google login. The real access control is <strong>who has the URL</strong> and <strong>who you've shared the Google Sheet with</strong>. Only share the deployment URL and the sheet itself with people you actually want to have your data — your partner, for example. Treat the URL like a password.</p>
-        <button class="btn btn-primary btn-sm" onclick="closeHelpModal();goNav('settings');setTimeout(()=>{const s=document.getElementById('sec-setup');if(s){s.scrollIntoView({behavior:'smooth',block:'start'});}},150);">Open setup guide →</button>
+        <p class="help-note" style="margin-top:10px;padding:10px 12px;background:var(--bg);border-left:3px solid var(--accent);border-radius:4px;"><strong>Who can see your data:</strong> Ledger only requests access to files it creates in your Drive — it cannot read the rest of your Drive. The access token never leaves your browser. If you share the file with someone else from Drive, they'll be able to see it — otherwise only you can.</p>
+        <button class="btn btn-primary btn-sm" onclick="closeHelpModal();goNav('settings');setTimeout(()=>{const s=document.getElementById('sec-drive');if(s){s.scrollIntoView({behavior:'smooth',block:'start'});}},150);">Open Cloud Sync settings →</button>
       </section>
 
       <section id="help-faq">
         <h3>FAQ</h3>
         <details class="help-q">
           <summary>Where is my data stored?</summary>
-          <p>Everything lives in your browser's localStorage. If you connect a Google Sheet, a copy also lives there (in your Drive). Ledger's creator never sees any of it.</p>
+          <p>Everything lives in your browser's localStorage. If you connect Google Drive, a copy also lives there as a JSON file in your own Drive. Ledger's creator never sees any of it.</p>
         </details>
         <details class="help-q">
           <summary>What happens if I clear my browser or switch devices?</summary>
-          <p>If you haven't connected Google Sheets, data is lost. With Sheets connected, pull from the sheet on the new device and everything is restored.</p>
+          <p>If you haven't connected Drive, data is lost. With Drive connected, pull from Drive on the new device and everything is restored.</p>
         </details>
         <details class="help-q">
           <summary>My CSV or PDF import looks wrong — what do I do?</summary>
@@ -1736,15 +1567,15 @@ function doGet(e) {
         </details>
         <details class="help-q">
           <summary>Can I export my data?</summary>
-          <p>Yes. The <em>↓ Export</em> button in the topbar dumps everything as CSV. Google Sheets is also a permanent export by design.</p>
+          <p>Yes. The <em>↓ Export</em> button in the topbar dumps everything as CSV. The Google Drive JSON file is also a permanent export by design.</p>
         </details>
         <details class="help-q">
           <summary>Does Ledger work offline?</summary>
-          <p>Yes for all local features. Google Sheets sync requires a connection.</p>
+          <p>Yes for all local features. Google Drive sync requires a connection.</p>
         </details>
         <details class="help-q">
           <summary>What does "Clear demo data" do?</summary>
-          <p>It wipes everything local so you can start with a blank slate. It does not touch any Google Sheet you may have connected.</p>
+          <p>It wipes everything local so you can start with a blank slate. It does not touch any Google Drive file you may have connected.</p>
         </details>
       </section>
 
@@ -2153,7 +1984,6 @@ let learned   = JSON.parse(localStorage.getItem('lt_learned')  || '{}');
 let incomes   = JSON.parse(localStorage.getItem('lt_incomes')  || '[]');
 let savAccts  = JSON.parse(localStorage.getItem('lt_savaccts') || '[]'); // savings accounts
 let contribs  = JSON.parse(localStorage.getItem('lt_contribs') || '[]'); // contribution log
-let sheetsUrl = localStorage.getItem('lt_sheets_url') || '';
 let mortBalances      = JSON.parse(localStorage.getItem('lt_mort_balances') || '{}');
 let mortVoluntaryPmts = JSON.parse(localStorage.getItem('lt_mort_voluntary') || '{}');
 let selMonth  = '';
@@ -2171,7 +2001,6 @@ function persist() {
   localStorage.setItem('lt_incomes',    JSON.stringify(incomes));
   localStorage.setItem('lt_savaccts',   JSON.stringify(savAccts));
   localStorage.setItem('lt_contribs',   JSON.stringify(contribs));
-  if (sheetsUrl) localStorage.setItem('lt_sheets_url', sheetsUrl);
 }
 
 // Returns a normalised merchant key for matching
@@ -5221,8 +5050,8 @@ document.addEventListener('input', e => {
   if (e.target.id === 'new-cat-color' || e.target.id === 'new-cat-label') updateCatPreview();
 });
 
-// ── GOOGLE SHEETS ────────────────────────────────────────
-const SEC_DEFAULTS = { appearance:true, people:false, cats:false, 'income-types':false, 'savings-types':false, sheets:true, sync:true, setup:false, github:false };
+// ── SETTINGS SECTIONS ────────────────────────────────────
+const SEC_DEFAULTS = { appearance:true, people:false, cats:false, 'income-types':false, 'savings-types':false, drive:true, tools:false };
 
 function getSecStates() {
   try { return JSON.parse(localStorage.getItem('lt_sec_states') || '{}'); } catch(e) { return {}; }
@@ -5250,9 +5079,6 @@ function initSecStates() {
 }
 
 function renderSettings() {
-  const inp = document.getElementById('sheets-url');
-  if (inp && sheetsUrl) inp.value = sheetsUrl;
-  updateSyncDot(sheetsUrl ? 'ok' : 'off');
   const jt = document.getElementById('toggle-joint');
   if (jt) jt.checked = showJoint;
   initSecStates();
@@ -5261,136 +5087,6 @@ function renderSettings() {
   renderCatManagement();
   renderCommitExclusions();
   renderTypeManagement();
-}
-
-function saveSheetUrl() {
-  if (_isDemo) return demoGateSync();
-  const val = document.getElementById('sheets-url').value.trim();
-  if (!val) { showConnStatus('Please paste a URL first.', 'err'); return; }
-  sheetsUrl = val;
-  localStorage.setItem('lt_sheets_url', sheetsUrl);
-  updateSyncDot('ok');
-  showConnStatus('URL saved. Click Test to verify the connection.', 'ok');
-}
-
-async function testConnection() {
-  if (_isDemo) return demoGateSync();
-  if (!sheetsUrl) { showConnStatus('No URL saved yet.', 'err'); return; }
-  showConnStatus('Testing...', 'busy');
-  try {
-    const res = await fetchWithTimeout(sheetsUrl, {});
-    const data = await res.json();
-    if (data.ok) {
-      showConnStatus('Connected successfully.', 'ok');
-      updateSyncDot('ok');
-    } else {
-      showConnStatus('Connected but got unexpected response.', 'err');
-    }
-  } catch (e) {
-    showConnStatus('Could not reach the URL. Check it is deployed correctly.', 'err');
-    updateSyncDot('err');
-  }
-}
-
-function fetchWithTimeout(url, opts, ms = 60000) {
-  const ctrl = new AbortController();
-  const id = setTimeout(() => ctrl.abort(new Error('Request timed out — Google Sheets took too long to respond. Try again.')), ms);
-  return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(id));
-}
-
-async function syncToSheets() {
-  if (_isDemo) return demoGateSync();
-  if (!sheetsUrl) { alert('Please connect a Google Sheet in Settings first.'); goNav('settings'); return; }
-  updateSyncDot('busy');
-  setSyncLabel('Pushing...');
-  try {
-    const res = await fetchWithTimeout(sheetsUrl, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, settings: { commitExcludedCats: [...commitExcludedCats], mortBalances, mortVoluntaryPmts, mortData } }),
-    });
-    const data = await res.json();
-    if (data.ok) {
-      updateSyncDot('ok');
-      setSyncLabel('Synced');
-      showConnStatus(`Pushed ${data.count} transactions to Google Sheets.`, 'ok');
-    } else {
-      throw new Error(data.error || 'Unknown error');
-    }
-  } catch (e) {
-    updateSyncDot('err');
-    setSyncLabel('Sync failed');
-    showConnStatus('Push failed: ' + e.message, 'err');
-  }
-}
-
-async function syncFromSheets() {
-  if (_isDemo) return demoGateSync();
-  if (!sheetsUrl) { alert('Please connect a Google Sheet in Settings first.'); goNav('settings'); return; }
-  if (!confirm('Pull will replace ALL local data with what is in Google Sheets. Continue?')) return;
-  updateSyncDot('busy');
-  setSyncLabel('Pulling...');
-  try {
-    const res = await fetchWithTimeout(sheetsUrl, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'pull' }),
-    });
-    const data = await res.json();
-    if (data.ok) {
-      // Fully replace local data with sheet data
-      txns     = (data.txns || []).map(t => ({
-        ...t,
-        date: t.date ? String(t.date).substring(0,10) : t.date
-      }));
-      learned  = data.learned  || {};
-      incomes  = (data.incomes  || []).map(i => ({...i, date: i.date ? String(i.date).substring(0,10) : undefined}));
-      savAccts = data.savAccts || [];
-      contribs = data.contribs || [];
-      recalcAllBalances();
-      uploads  = data.uploads  || [];
-      trash    = data.trash    || [];
-      if (data.cats) {
-        const knownFixed = {};
-        DEFAULT_CATS.forEach(c => { if (c.fixed) knownFixed[c.key] = true; });
-        CATS.forEach(c => { if (c.fixed) knownFixed[c.key] = true; });
-        CATS = data.cats.map(c => {
-          const nc = normCat(c);
-          if (!nc.fixed && knownFixed[nc.key]) nc.fixed = true;
-          return nc;
-        });
-        rebuildCAT(); saveCats();
-      }
-      if (data.settings?.commitExcludedCats) {
-        commitExcludedCats = new Set(data.settings.commitExcludedCats);
-        localStorage.setItem('lt_commit_excl', JSON.stringify([...commitExcludedCats]));
-        renderCommitExclusions();
-      }
-      if (data.settings?.mortBalances) {
-        mortBalances = data.settings.mortBalances;
-        localStorage.setItem('lt_mort_balances', JSON.stringify(mortBalances));
-      }
-      if (data.settings?.mortVoluntaryPmts) {
-        mortVoluntaryPmts = data.settings.mortVoluntaryPmts;
-        localStorage.setItem('lt_mort_voluntary', JSON.stringify(mortVoluntaryPmts));
-      }
-      if (data.settings?.mortData) {
-        mortData = data.settings.mortData;
-        localStorage.setItem('lt_mort_data', JSON.stringify(mortData));
-      }
-      repairIncomeDates();
-      persist();
-      updateSyncDot('ok');
-      setSyncLabel('Synced');
-      showConnStatus(`Pulled ${txns.length} transactions from Google Sheets.`, 'ok');
-      renderPills();
-      renderDashboard();
-    } else {
-      throw new Error(data.error || 'Unknown error');
-    }
-  } catch (e) {
-    updateSyncDot('err');
-    setSyncLabel('Sync failed');
-    showConnStatus('Pull failed: ' + e.message, 'err');
-  }
 }
 
 // ── GOOGLE DRIVE API SYNC ──
@@ -5666,7 +5362,7 @@ function gdRestoreSessionIfAny() {
 }
 
 function clearLocalData() {
-  if (!confirm('This will wipe all local data from this device (transactions, incomes, savings, mortgages). Your Google Sheet data is unaffected. Use Pull to reload it. Continue?')) return;
+  if (!confirm('This will wipe all local data from this device (transactions, incomes, savings, mortgages). Your Google Drive data is unaffected. Use Pull to reload it. Continue?')) return;
   _wipeAllLocalState();
   persist(); saveMortData();
   localStorage.setItem('lt_mort_balances', JSON.stringify(mortBalances));
@@ -5678,7 +5374,7 @@ function clearLocalData() {
   if (typeof renderIncome === 'function') renderIncome();
   if (typeof renderSavings === 'function') renderSavings();
   if (typeof renderMortgages === 'function') renderMortgages();
-  showConnStatus('Local data cleared. Hit Pull to reload from Google Sheets.', 'ok');
+  if (typeof showGdStatus === 'function') showGdStatus('Local data cleared. Hit Pull to reload from Drive.', 'ok');
 }
 
 function _wipeAllLocalState() {
@@ -5689,7 +5385,7 @@ function _wipeAllLocalState() {
 }
 
 function loadSampleData() {
-  if (!confirm('This replaces all current local data with a sample dataset so you can explore the app. Your Google Sheet data is unaffected. Continue?')) return;
+  if (!confirm('This replaces all current local data with a sample dataset so you can explore the app. Your Google Drive data is unaffected. Continue?')) return;
 
   _wipeAllLocalState();
 
@@ -5859,7 +5555,6 @@ function loadSampleData() {
   if (typeof renderSavings === 'function')   renderSavings();
   if (typeof renderMortgages === 'function') renderMortgages();
 
-  showConnStatus('Sample data loaded. Use "Clear local data" to start fresh.', 'ok');
   alert('Sample data loaded! Explore the Dashboard, Transactions, Income, Savings, and Mortgages pages. Use Settings → Clear local data to start fresh.');
 }
 
@@ -5881,7 +5576,7 @@ function repairIncomeEntries() {
   const el = document.getElementById('repair-status');
   if (created > 0) {
     el.style.color = '#2d6a4f';
-    el.textContent = `Created ${created} missing income entr${created === 1 ? 'y' : 'ies'}. Push to save to Google Sheets.`;
+    el.textContent = `Created ${created} missing income entr${created === 1 ? 'y' : 'ies'}. Push to save to Google Drive.`;
     renderIncome(); renderDashboard(); autoPush();
   } else {
     el.style.color = 'var(--muted)';
@@ -5903,50 +5598,23 @@ function setSyncLabel(text) {
   if (el) el.textContent = text;
 }
 
-function showConnStatus(msg, type) {
-  const el = document.getElementById('conn-status');
-  if (!el) return;
-  const colors = { ok: '#2d6a4f', err: '#dc2626', busy: '#c15c1e' };
-  el.style.color = colors[type] || 'var(--muted)';
-  el.textContent = msg;
-}
-
-function copyScript() {
-  const code = document.getElementById('apps-script-code').textContent;
-  navigator.clipboard.writeText(code).then(() => {
-    const btn = event.target;
-    btn.textContent = 'Copied!';
-    setTimeout(() => btn.textContent = 'Copy', 2000);
-  });
-}
-
 async function manualPush() {
   if (_isDemo) return demoGateSync();
-  if (!sheetsUrl) { alert('Google Sheets not connected. Add your URL in Settings.'); return; }
+  if (!gdToken && !gdFileId) { alert('Google Drive not connected. Connect it in Settings.'); return; }
   const btn = document.getElementById('dash-push-btn');
   if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
-  await autoPush();
+  await gdPush();
   if (btn) { btn.disabled = false; btn.style.opacity = ''; }
 }
 
-// Auto-push to sheets after every import if connected
+// Auto-push to Drive after every import if connected
 async function autoPush() {
   if (_isDemo) return;
-  if (sheetsUrl) {
-    updateSyncDot('busy');
-    try {
-      const res = await fetchWithTimeout(sheetsUrl, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'push', txns, learned, incomes, savAccts, contribs, cats: CATS, uploads, trash, settings: { commitExcludedCats: [...commitExcludedCats], mortBalances, mortVoluntaryPmts, mortData } }),
-      });
-      const data = await res.json();
-      if (!data.ok) throw new Error(data.error || 'Push failed');
-      updateSyncDot('ok');
-      setSyncLabel('Synced');
-    } catch(e) {
-      updateSyncDot('err');
-      setSyncLabel('Not synced');
-    }
+  if (!gdFileId) return;
+  try {
+    await gdPush();
+  } catch (e) {
+    // gdPush handles its own status display
   }
 }
 
@@ -7180,18 +6848,11 @@ function showDemoHero() {
   if (dh) dh.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function applyDemoSyncGates() {
-  const urlInput = document.getElementById('sheets-url');
-  if (urlInput) {
-    urlInput.disabled = true;
-    urlInput.placeholder = 'Sign up to connect your Google Sheet';
-    urlInput.classList.add('demo-locked-input');
-    urlInput.value = '';
-  }
-  ['sheets-connect-btn','sheets-test-btn','sheets-push-btn','sheets-pull-btn','dash-push-btn']
+  ['gd-connect-btn','gd-disconnect-btn','gd-push-btn','gd-pull-btn','dash-push-btn']
     .forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('demo-disabled'); });
 }
 function demoGateSync() {
-  showToast('Sign up to sync your data to Google Sheets');
+  showToast('Sign up to sync your data to Google Drive');
   return true;
 }
 function resetDemoData() {
@@ -7393,8 +7054,8 @@ function showToast(msg) {
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
 }
-updateSyncDot(sheetsUrl ? 'ok' : 'off');
-setSyncLabel(sheetsUrl ? 'Connected' : 'Not connected');
+updateSyncDot(gdFileId ? 'ok' : 'off');
+setSyncLabel(gdFileId ? 'Connected' : 'Not connected');
 setTimeout(gdRestoreSessionIfAny, 300);
 ['col-date','col-merchant','col-amount','col-credit'].forEach(id => {
   const el = document.getElementById(id); if (el) el.addEventListener('change', updateImportPreview);
