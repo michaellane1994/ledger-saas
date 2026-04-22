@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root {
   --ink:     #18181b;
@@ -1230,14 +1231,35 @@ tbody tr:hover .row-menu-btn{opacity:1;}
       </div>
 
       <div class="card" style="margin-bottom:18px;">
+        <div class="card-head" onclick="toggleSettingsSec('drive')" style="cursor:pointer;">
+          <div class="card-title">Cloud Sync (Google Drive)</div>
+          <span class="sec-toggle" id="chev-drive">▾</span>
+        </div>
+        <div class="card-body sec-body" id="sec-drive">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">
+            Connect your Google Drive so your data syncs across devices. Ledger stores a single JSON file (<code>ledger-data.json</code>) in your own Drive — we never see it.
+          </p>
+          <div id="gd-status-row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <button class="btn btn-primary" id="gd-connect-btn" onclick="gdConnect()">Connect Google Drive</button>
+            <button class="btn btn-ghost" id="gd-disconnect-btn" onclick="gdDisconnect()" style="display:none;">Disconnect</button>
+            <span id="gd-status" style="font-size:12.5px;color:var(--muted);"></span>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;" id="gd-push-pull-row" style="display:none;">
+            <button class="btn btn-primary" id="gd-push-btn" onclick="gdPush()" disabled>↑ Push to Drive</button>
+            <button class="btn btn-ghost" id="gd-pull-btn" onclick="gdPull()" disabled>↓ Pull from Drive</button>
+          </div>
+          <div class="demo-lock-chip" onclick="openPricingModal()">🔒 Sign up to enable cloud sync →</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
         <div class="card-head" onclick="toggleSettingsSec('sheets')" style="cursor:pointer;">
-          <div class="card-title">Google Sheets Sync</div>
+          <div class="card-title">Google Sheets Sync <span style="font-size:11px;color:var(--faint);font-weight:400;text-transform:uppercase;letter-spacing:.5px;">(legacy)</span></div>
           <span class="sec-toggle" id="chev-sheets">▾</span>
         </div>
         <div class="card-body sec-body" id="sec-sheets">
           <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">
-            Connect to a Google Sheet so your data syncs across all your devices. 
-            Follow the setup guide below to get your Web App URL, then paste it here.
+            Legacy sync via Apps Script. Superseded by Cloud Sync above.
           </p>
           <div style="display:flex;gap:10px;align-items:flex-end;" id="sheets-url-row">
             <div style="flex:1;">
@@ -5371,6 +5393,278 @@ async function syncFromSheets() {
   }
 }
 
+// ── GOOGLE DRIVE API SYNC ──
+const GOOGLE_CLIENT_ID = '1077853475732-uj98ci4fvlnqrnk5q4f7b4koavrl8cvu.apps.googleusercontent.com';
+const GD_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const GD_FILE_NAME = 'ledger-data.json';
+let gdToken = null;
+let gdFileId = localStorage.getItem('lt_gd_file_id') || null;
+let gdTokenClient = null;
+let gdUserEmail = localStorage.getItem('lt_gd_email') || null;
+
+function gdInitTokenClient() {
+  if (gdTokenClient) return gdTokenClient;
+  if (typeof google === 'undefined' || !google.accounts?.oauth2) {
+    showGdStatus('Google sign-in library still loading — try again in a moment.', 'err');
+    return null;
+  }
+  gdTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: GD_SCOPE,
+    callback: async (response) => {
+      if (response.error) {
+        showGdStatus('Authorization failed: ' + response.error, 'err');
+        return;
+      }
+      gdToken = response.access_token;
+      try {
+        const profile = await gdFetchProfile();
+        if (profile?.emailAddress) {
+          gdUserEmail = profile.emailAddress;
+          localStorage.setItem('lt_gd_email', gdUserEmail);
+        }
+        await gdFindOrCreateFile();
+        gdRenderConnected();
+        showGdStatus('Connected. Ready to push or pull.', 'ok');
+      } catch (e) {
+        showGdStatus('Connected but file setup failed: ' + e.message, 'err');
+      }
+    },
+  });
+  return gdTokenClient;
+}
+
+async function gdFetchProfile() {
+  const res = await fetch('https://www.googleapis.com/drive/v3/about?fields=user', {
+    headers: { Authorization: 'Bearer ' + gdToken },
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.user;
+}
+
+function gdConnect() {
+  if (_isDemo) return demoGateSync();
+  const client = gdInitTokenClient();
+  if (!client) return;
+  client.requestAccessToken({ prompt: gdToken ? '' : 'consent' });
+}
+
+function gdDisconnect() {
+  const token = gdToken;
+  gdToken = null;
+  gdFileId = null;
+  gdUserEmail = null;
+  localStorage.removeItem('lt_gd_file_id');
+  localStorage.removeItem('lt_gd_email');
+  if (token && google?.accounts?.oauth2) {
+    google.accounts.oauth2.revoke(token, () => {});
+  }
+  gdRenderDisconnected();
+  showGdStatus('Disconnected.', 'ok');
+}
+
+async function gdEnsureToken() {
+  if (gdToken) return gdToken;
+  return new Promise((resolve, reject) => {
+    const client = gdInitTokenClient();
+    if (!client) return reject(new Error('Google library not loaded'));
+    const originalCallback = client.callback;
+    client.callback = (response) => {
+      if (response.error) {
+        client.callback = originalCallback;
+        return reject(new Error(response.error));
+      }
+      gdToken = response.access_token;
+      client.callback = originalCallback;
+      resolve(gdToken);
+    };
+    client.requestAccessToken({ prompt: '' });
+  });
+}
+
+async function gdFindOrCreateFile() {
+  await gdEnsureToken();
+  const q = encodeURIComponent(`name='${GD_FILE_NAME}' and trashed=false`);
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&spaces=drive`, {
+    headers: { Authorization: 'Bearer ' + gdToken },
+  });
+  if (!res.ok) throw new Error('Drive list failed: ' + res.status);
+  const data = await res.json();
+  if (data.files && data.files.length > 0) {
+    gdFileId = data.files[0].id;
+    localStorage.setItem('lt_gd_file_id', gdFileId);
+    return gdFileId;
+  }
+  // Create new file with empty payload
+  const meta = { name: GD_FILE_NAME, mimeType: 'application/json' };
+  const boundary = 'ledger' + Date.now();
+  const body =
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n` +
+    `--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify({})}\r\n` +
+    `--${boundary}--`;
+  const createRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+    method: 'POST',
+    headers: {
+      Authorization: 'Bearer ' + gdToken,
+      'Content-Type': `multipart/related; boundary=${boundary}`,
+    },
+    body,
+  });
+  if (!createRes.ok) throw new Error('Drive create failed: ' + createRes.status);
+  const created = await createRes.json();
+  gdFileId = created.id;
+  localStorage.setItem('lt_gd_file_id', gdFileId);
+  return gdFileId;
+}
+
+async function gdPush() {
+  if (_isDemo) return demoGateSync();
+  try {
+    await gdEnsureToken();
+    if (!gdFileId) await gdFindOrCreateFile();
+    updateSyncDot('busy');
+    setSyncLabel('Pushing...');
+    showGdStatus('Pushing...', 'busy');
+    const payload = {
+      txns, learned, incomes, savAccts, contribs,
+      cats: CATS, uploads, trash,
+      settings: { commitExcludedCats: [...commitExcludedCats], mortBalances, mortVoluntaryPmts, mortData },
+      updatedAt: new Date().toISOString(),
+    };
+    const res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${gdFileId}?uploadType=media`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: 'Bearer ' + gdToken,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Drive upload failed: ' + res.status);
+    updateSyncDot('ok');
+    setSyncLabel('Synced');
+    showGdStatus(`Pushed ${txns.length} transactions to Google Drive.`, 'ok');
+  } catch (e) {
+    updateSyncDot('err');
+    setSyncLabel('Sync failed');
+    showGdStatus('Push failed: ' + e.message, 'err');
+  }
+}
+
+async function gdPull() {
+  if (_isDemo) return demoGateSync();
+  if (!confirm('Pull will replace ALL local data with what is in your Google Drive. Continue?')) return;
+  try {
+    await gdEnsureToken();
+    if (!gdFileId) await gdFindOrCreateFile();
+    updateSyncDot('busy');
+    setSyncLabel('Pulling...');
+    showGdStatus('Pulling...', 'busy');
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${gdFileId}?alt=media`, {
+      headers: { Authorization: 'Bearer ' + gdToken },
+    });
+    if (!res.ok) throw new Error('Drive download failed: ' + res.status);
+    const data = await res.json();
+    if (!data || typeof data !== 'object') throw new Error('Invalid file contents');
+    if (Object.keys(data).length === 0) {
+      showGdStatus('Drive file is empty — nothing to pull. Push first.', 'err');
+      updateSyncDot('err');
+      setSyncLabel('Sync failed');
+      return;
+    }
+    txns     = (data.txns || []).map(t => ({ ...t, date: t.date ? String(t.date).substring(0,10) : t.date }));
+    learned  = data.learned  || {};
+    incomes  = (data.incomes  || []).map(i => ({ ...i, date: i.date ? String(i.date).substring(0,10) : undefined }));
+    savAccts = data.savAccts || [];
+    contribs = data.contribs || [];
+    recalcAllBalances();
+    uploads  = data.uploads  || [];
+    trash    = data.trash    || [];
+    if (data.cats) {
+      const knownFixed = {};
+      DEFAULT_CATS.forEach(c => { if (c.fixed) knownFixed[c.key] = true; });
+      CATS.forEach(c => { if (c.fixed) knownFixed[c.key] = true; });
+      CATS = data.cats.map(c => {
+        const nc = normCat(c);
+        if (!nc.fixed && knownFixed[nc.key]) nc.fixed = true;
+        return nc;
+      });
+      rebuildCAT(); saveCats();
+    }
+    if (data.settings?.commitExcludedCats) {
+      commitExcludedCats = new Set(data.settings.commitExcludedCats);
+      localStorage.setItem('lt_commit_excl', JSON.stringify([...commitExcludedCats]));
+      renderCommitExclusions();
+    }
+    if (data.settings?.mortBalances) {
+      mortBalances = data.settings.mortBalances;
+      localStorage.setItem('lt_mort_balances', JSON.stringify(mortBalances));
+    }
+    if (data.settings?.mortVoluntaryPmts) {
+      mortVoluntaryPmts = data.settings.mortVoluntaryPmts;
+      localStorage.setItem('lt_mort_voluntary', JSON.stringify(mortVoluntaryPmts));
+    }
+    if (data.settings?.mortData) {
+      mortData = data.settings.mortData;
+      localStorage.setItem('lt_mort_data', JSON.stringify(mortData));
+    }
+    repairIncomeDates();
+    persist();
+    updateSyncDot('ok');
+    setSyncLabel('Synced');
+    showGdStatus(`Pulled ${txns.length} transactions from Google Drive.`, 'ok');
+    renderPills();
+    renderDashboard();
+  } catch (e) {
+    updateSyncDot('err');
+    setSyncLabel('Sync failed');
+    showGdStatus('Pull failed: ' + e.message, 'err');
+  }
+}
+
+function gdRenderConnected() {
+  const connectBtn = document.getElementById('gd-connect-btn');
+  const disconnectBtn = document.getElementById('gd-disconnect-btn');
+  const pushBtn = document.getElementById('gd-push-btn');
+  const pullBtn = document.getElementById('gd-pull-btn');
+  const pushPullRow = document.getElementById('gd-push-pull-row');
+  if (connectBtn) connectBtn.style.display = 'none';
+  if (disconnectBtn) disconnectBtn.style.display = '';
+  if (pushBtn) pushBtn.disabled = false;
+  if (pullBtn) pullBtn.disabled = false;
+  if (pushPullRow) pushPullRow.style.display = '';
+  if (gdUserEmail) showGdStatus(`Connected as ${gdUserEmail}.`, 'ok');
+  updateSyncDot('ok');
+}
+
+function gdRenderDisconnected() {
+  const connectBtn = document.getElementById('gd-connect-btn');
+  const disconnectBtn = document.getElementById('gd-disconnect-btn');
+  const pushBtn = document.getElementById('gd-push-btn');
+  const pullBtn = document.getElementById('gd-pull-btn');
+  if (connectBtn) connectBtn.style.display = '';
+  if (disconnectBtn) disconnectBtn.style.display = 'none';
+  if (pushBtn) pushBtn.disabled = true;
+  if (pullBtn) pullBtn.disabled = true;
+  updateSyncDot('');
+}
+
+function showGdStatus(msg, kind) {
+  const el = document.getElementById('gd-status');
+  if (!el) return;
+  const color = kind === 'ok' ? 'var(--ok, #15803d)' : kind === 'err' ? 'var(--danger, #b91c1c)' : 'var(--muted)';
+  el.textContent = msg;
+  el.style.color = color;
+}
+
+function gdRestoreSessionIfAny() {
+  // After a page reload the access token is gone (we never persisted it).
+  // If we have a file ID cached, surface a "reconnect" affordance.
+  if (gdFileId && gdUserEmail) {
+    showGdStatus(`Previously connected as ${gdUserEmail}. Click Connect to resume.`, '');
+  }
+}
+
 function clearLocalData() {
   if (!confirm('This will wipe all local data from this device (transactions, incomes, savings, mortgages). Your Google Sheet data is unaffected. Use Pull to reload it. Continue?')) return;
   _wipeAllLocalState();
@@ -7101,6 +7395,7 @@ function showToast(msg) {
 }
 updateSyncDot(sheetsUrl ? 'ok' : 'off');
 setSyncLabel(sheetsUrl ? 'Connected' : 'Not connected');
+setTimeout(gdRestoreSessionIfAny, 300);
 ['col-date','col-merchant','col-amount','col-credit'].forEach(id => {
   const el = document.getElementById(id); if (el) el.addEventListener('change', updateImportPreview);
 });
