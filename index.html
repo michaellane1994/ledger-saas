@@ -1282,7 +1282,22 @@ tbody tr:hover .row-menu-btn{opacity:1;}
         </div>
         <div class="card-body sec-body" id="sec-setup">
           <div style="font-size:13px;color:var(--muted);line-height:1.8;">
-            <p style="margin-bottom:12px;">Follow these steps once to connect your Google Sheet:</p>
+            <p style="margin-bottom:12px;"><strong>Quick setup</strong> — uses our pre-built template (~2 min):</p>
+            <ol style="padding-left:18px;display:flex;flex-direction:column;gap:10px;">
+              <li>
+                <a href="https://docs.google.com/spreadsheets/d/1TjxjnXlV-XprxD3aKkS8dP8xL6ZhaTgWSRRxtooUvfw/copy" target="_blank" rel="noopener" class="btn btn-primary btn-sm" style="display:inline-block;margin:2px 0;">📄 Copy Ledger template to your Drive</a>
+                <div style="font-size:12px;color:var(--faint);margin-top:4px;">Creates a copy in your own Google Drive with the Apps Script code already included. Nothing is shared with us.</div>
+              </li>
+              <li>Open the copied sheet, then click <strong>Extensions → Apps Script</strong>.</li>
+              <li>In the Apps Script editor, click <strong>Deploy → New deployment</strong>. Type: <strong>Web app</strong>. Execute as: <strong>Me</strong>. Access: <strong>Anyone</strong>. Click Deploy and authorize when prompted.</li>
+              <li>Copy the <strong>Web app URL</strong> it gives you and paste it into the field above.</li>
+              <li>Click <strong>Connect</strong>, then <strong>Push to Google Sheets</strong> to do your first sync.</li>
+            </ol>
+
+            <details style="margin-top:22px;border-top:1px solid var(--border);padding-top:14px;">
+              <summary style="cursor:pointer;font-size:12px;color:var(--faint);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Advanced — build from scratch without the template</summary>
+              <div style="margin-top:14px;">
+            <p style="margin-bottom:12px;">Prefer to build the sheet yourself? Follow these steps:</p>
             <ol style="padding-left:18px;display:flex;flex-direction:column;gap:10px;">
               <li>Go to <strong>sheets.google.com</strong> and create a new blank spreadsheet. Name it <em>Ledger</em>.</li>
               <li>Click <strong>Extensions → Apps Script</strong> in the menu bar.</li>
@@ -1393,6 +1408,8 @@ function doGet(e) {
                 <button class="btn btn-ghost btn-sm" onclick="copyScript()" style="position:absolute;top:10px;right:10px;">Copy</button>
               </div>
             </div>
+              </div>
+            </details>
           </div>
         </div>
       </div>
@@ -1657,14 +1674,14 @@ function doGet(e) {
       <section id="help-sync">
         <h3>Google Sheets sync</h3>
         <p>Ledger does not store your transactions. If you want data to survive browser clears or sync across devices, connect your own Google Sheet.</p>
-        <p><strong>The short version:</strong></p>
+        <p><strong>Quick version</strong> (~2 min):</p>
         <ol class="help-steps">
-          <li>Create a new blank Google Sheet.</li>
-          <li>In that sheet, open <em>Extensions → Apps Script</em> and paste the Ledger script.</li>
-          <li>Deploy as a Web App (anyone with the link, execute as you).</li>
-          <li>Copy the deployment URL back into Ledger's settings.</li>
+          <li><a href="https://docs.google.com/spreadsheets/d/1TjxjnXlV-XprxD3aKkS8dP8xL6ZhaTgWSRRxtooUvfw/copy" target="_blank" rel="noopener">Click here to copy the Ledger template</a> into your own Google Drive.</li>
+          <li>In the copied sheet, open <em>Extensions → Apps Script</em>.</li>
+          <li>Deploy as a Web App (Execute as: Me, Access: Anyone) and authorize.</li>
+          <li>Copy the deployment URL back into Ledger's settings and hit Connect.</li>
         </ol>
-        <p class="help-note">The full step-by-step (with the exact script) lives in <strong>Settings → Google Sheets Setup Guide</strong>.</p>
+        <p class="help-note">Full walkthrough (plus an "advanced: build from scratch" option) in <strong>Settings → Google Sheets Setup Guide</strong>.</p>
         <p class="help-note" style="margin-top:10px;padding:10px 12px;background:var(--bg);border-left:3px solid var(--accent);border-radius:4px;"><strong>Important — who can access your data:</strong> Even though the Apps Script deployment is set to <em>Anyone</em> (required for the app to call it), that only means the URL doesn't require Google login. The real access control is <strong>who has the URL</strong> and <strong>who you've shared the Google Sheet with</strong>. Only share the deployment URL and the sheet itself with people you actually want to have your data — your partner, for example. Treat the URL like a password.</p>
         <button class="btn btn-primary btn-sm" onclick="closeHelpModal();goNav('settings');setTimeout(()=>{const s=document.getElementById('sec-setup');if(s){s.scrollIntoView({behavior:'smooth',block:'start'});}},150);">Open setup guide →</button>
       </section>
