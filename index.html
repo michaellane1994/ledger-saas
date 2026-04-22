@@ -7152,7 +7152,7 @@ if (localStorage.getItem('lt_welcomed')) {
 
 // ── DEMO MODE ──
 // Placeholder auth flag: flipped to false once we wire in real auth.
-const _isDemo = true;
+let _isDemo = !location.search.includes('dev=1');
 if (_isDemo) {
   document.body.classList.add('demo-mode');
   const wb = document.getElementById('welcome-banner');
