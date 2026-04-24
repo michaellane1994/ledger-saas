@@ -56,6 +56,13 @@ body.demo-mode #dash-period-bar{top:98px;}
 body.demo-mode .topbar-pills-row{top:98px;}
 body.demo-mode .main{padding-top:98px;}
 body.demo-mode .main.dash-bar-visible{padding-top:134px;}
+body.signed-in .demo-top-strip{display:flex;background:linear-gradient(90deg,#15803d,#166534);}
+body.signed-in .sidebar{top:40px;}
+body.signed-in .topbar{top:40px;}
+body.signed-in #dash-period-bar{top:98px;}
+body.signed-in .topbar-pills-row{top:98px;}
+body.signed-in .main{padding-top:98px;}
+body.signed-in .main.dash-bar-visible{padding-top:134px;}
 .demo-top-strip-left{display:flex;align-items:center;gap:14px;min-width:0;flex:1;}
 .demo-top-strip-left span{color:rgba(255,255,255,.78);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .demo-top-strip-left .demo-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#4ade80;flex-shrink:0;box-shadow:0 0 0 3px rgba(74,222,128,.15);}
@@ -7147,8 +7154,9 @@ async function refreshAuthState() {
 function applyAuthUI() {
   const strip = document.querySelector('.demo-top-strip');
   if (_authSession) {
-    // Signed in: undo any demo-mode UI that may have been applied inline
+    // Signed in: swap body class from demo-mode to signed-in, undo demo UI
     document.body.classList.remove('demo-mode');
+    document.body.classList.add('signed-in');
     const dh = document.getElementById('demo-hero');
     if (dh) dh.style.display = 'none';
     const wb = document.getElementById('welcome-banner');
@@ -7167,9 +7175,10 @@ function applyAuthUI() {
         <div class="demo-top-strip-right">
           <button onclick="logout()">Log out</button>
         </div>`;
-      strip.style.background = 'var(--bg)';
     }
     closeAuthModal();
+  } else {
+    document.body.classList.remove('signed-in');
   }
 }
 
