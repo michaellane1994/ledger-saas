@@ -9,6 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --ink:     #18181b;
@@ -1440,6 +1441,26 @@ tbody tr:hover .row-menu-btn{opacity:1;}
       </ul>
       <button class="btn btn-primary" onclick="startTrialFlow()" style="width:100%;padding:12px 18px;font-size:14px;font-weight:600;">Start 14-day free trial</button>
       <div style="text-align:center;margin-top:14px;font-size:12px;color:var(--muted);">Already have an account? <a onclick="startLoginFlow()" style="color:var(--accent);cursor:pointer;text-decoration:underline;">Log in</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="auth-modal">
+  <div class="modal" style="max-width:420px;">
+    <div class="help-head">
+      <div>
+        <div class="help-title" id="auth-title">Create your account</div>
+        <div class="help-sub" id="auth-sub">Start your 14-day free trial. No card needed.</div>
+      </div>
+      <button onclick="closeAuthModal()" class="help-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="help-body" style="padding:22px 24px;">
+      <label for="auth-email" style="display:block;font-size:13px;margin-bottom:8px;color:var(--ink);">Email address</label>
+      <input type="email" id="auth-email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')sendMagicLink()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;background:var(--surface);color:var(--ink);box-sizing:border-box;">
+      <button id="auth-submit" class="btn btn-primary" onclick="sendMagicLink()" style="width:100%;padding:12px;margin-top:14px;font-weight:600;">Send magic link</button>
+      <div id="auth-status" style="margin-top:14px;font-size:13px;color:var(--muted);min-height:20px;line-height:1.5;"></div>
+      <p style="font-size:11px;color:var(--faint);margin-top:16px;line-height:1.5;">We'll email you a one-click sign-in link. No password to remember. The link expires in 1 hour.</p>
     </div>
   </div>
 </div>
@@ -6833,9 +6854,12 @@ if (localStorage.getItem('lt_welcomed')) {
   if (wb) wb.style.display = 'none';
 }
 
-// ── DEMO MODE ──
-// Placeholder auth flag: flipped to false once we wire in real auth.
-let _isDemo = !location.search.includes('dev=1');
+// ── DEMO MODE + AUTH ──
+// Quick synchronous check: if Supabase session exists in localStorage, treat as signed-in.
+// refreshAuthState() runs async on load and confirms / corrects this.
+const _SB_SESSION_KEY = 'sb-eiekaxvlmspqpwqsikhg-auth-token';
+const _hasCachedSession = !!localStorage.getItem(_SB_SESSION_KEY);
+let _isDemo = !_hasCachedSession && !location.search.includes('dev=1');
 if (_isDemo) {
   document.body.classList.add('demo-mode');
   const wb = document.getElementById('welcome-banner');
@@ -7038,13 +7062,120 @@ function setPricingPlan(plan) {
   }
 }
 function startTrialFlow() {
-  // Placeholder — real flow wires up to auth + Stripe in a later pass.
-  showToast('Trial signup coming soon — auth and billing hook up next');
+  closePricingModal();
+  openAuthModal('signup');
 }
 function startLoginFlow() {
-  // Placeholder — real flow wires up to auth in a later pass.
-  showToast('Login coming soon — auth wires up next');
+  closePricingModal();
+  openAuthModal('login');
 }
+
+// ── SUPABASE AUTH ──
+const SUPABASE_URL = 'https://eiekaxvlmspqpwqsikhg.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_mx6vAI1hbZvC-0kQy_Hqnw_46cvMNH8';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+let _authSession = null;
+let _authUserRow = null;
+
+function openAuthModal(mode) {
+  const m = document.getElementById('auth-modal');
+  const title = document.getElementById('auth-title');
+  const sub = document.getElementById('auth-sub');
+  if (mode === 'login') {
+    title.textContent = 'Welcome back';
+    sub.textContent = 'Enter your email to log in.';
+  } else {
+    title.textContent = 'Create your account';
+    sub.textContent = 'Start your 14-day free trial. No card needed.';
+  }
+  document.getElementById('auth-status').textContent = '';
+  document.getElementById('auth-email').value = '';
+  m.classList.add('open');
+  setTimeout(() => document.getElementById('auth-email').focus(), 50);
+}
+
+function closeAuthModal() {
+  document.getElementById('auth-modal').classList.remove('open');
+}
+
+async function sendMagicLink() {
+  const email  = document.getElementById('auth-email').value.trim();
+  const status = document.getElementById('auth-status');
+  const btn    = document.getElementById('auth-submit');
+  if (!email || !email.includes('@')) {
+    status.style.color = '#b91c1c';
+    status.textContent = 'Please enter a valid email.';
+    return;
+  }
+  btn.disabled = true;
+  btn.style.opacity = '0.6';
+  status.style.color = 'var(--muted)';
+  status.textContent = 'Sending...';
+  const { error } = await sb.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: location.origin + location.pathname }
+  });
+  btn.disabled = false;
+  btn.style.opacity = '';
+  if (error) {
+    status.style.color = '#b91c1c';
+    status.textContent = 'Could not send link: ' + error.message;
+  } else {
+    status.style.color = '#15803d';
+    status.textContent = 'Check your inbox. Click the link in the email to finish signing in.';
+  }
+}
+
+async function logout() {
+  await sb.auth.signOut();
+  location.reload();
+}
+
+async function refreshAuthState() {
+  const { data: { session } } = await sb.auth.getSession();
+  _authSession = session;
+  if (session) {
+    const { data: userRow } = await sb.from('users').select('*').eq('id', session.user.id).single();
+    _authUserRow = userRow || null;
+  } else {
+    _authUserRow = null;
+  }
+  applyAuthUI();
+}
+
+function applyAuthUI() {
+  const strip = document.querySelector('.demo-top-strip');
+  if (_authSession) {
+    // Signed in: hide demo-mode UI, swap top-strip to account controls
+    document.body.classList.remove('demo-mode');
+    if (strip) {
+      strip.innerHTML = `
+        <div class="demo-top-strip-left">
+          <span>Signed in as <strong>${_authSession.user.email}</strong></span>
+        </div>
+        <div class="demo-top-strip-right">
+          <button onclick="logout()">Log out</button>
+        </div>`;
+    }
+    // If user landed here from a magic-link redirect, close the auth modal
+    closeAuthModal();
+  }
+}
+
+// React to sign-in / sign-out / token refresh
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+    // First sign-in: reload so the demo-mode init short-circuits cleanly.
+    if (!_authSession && session) { location.reload(); return; }
+    refreshAuthState();
+  } else if (event === 'SIGNED_OUT') {
+    refreshAuthState();
+  }
+});
+
+// Kick off on load
+refreshAuthState();
 document.addEventListener('click', (e) => {
   const m = document.getElementById('pricing-modal');
   if (m && m.classList.contains('open') && e.target === m) closePricingModal();
