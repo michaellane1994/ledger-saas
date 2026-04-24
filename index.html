@@ -63,6 +63,14 @@ body.signed-in #dash-period-bar{top:98px;}
 body.signed-in .topbar-pills-row{top:98px;}
 body.signed-in .main{padding-top:98px;}
 body.signed-in .main.dash-bar-visible{padding-top:134px;}
+body.trial-expired .demo-top-strip{display:flex;background:linear-gradient(90deg,#c2410c,#9a3412);}
+body.trial-expired .sidebar{top:40px;}
+body.trial-expired .topbar{top:40px;}
+body.trial-expired #dash-period-bar{top:98px;}
+body.trial-expired .topbar-pills-row{top:98px;}
+body.trial-expired .main{padding-top:98px;}
+body.trial-expired .main.dash-bar-visible{padding-top:134px;}
+.trial-badge{background:rgba(255,255,255,.2);padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:500;letter-spacing:.01em;margin-left:10px;white-space:nowrap;}
 .demo-top-strip-left{display:flex;align-items:center;gap:14px;min-width:0;flex:1;}
 .demo-top-strip-left span{color:rgba(255,255,255,.78);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .demo-top-strip-left .demo-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#4ade80;flex-shrink:0;box-shadow:0 0 0 3px rgba(74,222,128,.15);}
@@ -6898,7 +6906,11 @@ function applyDemoSyncGates() {
     .forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('demo-disabled'); });
 }
 function demoGateSync() {
-  showToast('Sign up to sync your data to Google Drive');
+  if (_authSession) {
+    showToast('Your trial has ended. Subscribe to keep cloud sync.');
+  } else {
+    showToast('Sign up to sync your data to Google Drive');
+  }
   return true;
 }
 function resetDemoData() {
@@ -7151,10 +7163,30 @@ async function refreshAuthState() {
   applyAuthUI();
 }
 
+function _authIsActive() {
+  if (!_authUserRow) return false;
+  if (_authUserRow.subscription_status === 'active') return true;
+  if (_authUserRow.subscription_status === 'trialing' && new Date(_authUserRow.trial_ends_at) > new Date()) return true;
+  return false;
+}
+
+function _daysLeftInTrial() {
+  if (!_authUserRow?.trial_ends_at) return null;
+  const ms = new Date(_authUserRow.trial_ends_at) - new Date();
+  if (ms <= 0) return 0;
+  return Math.ceil(ms / 86400000);
+}
+
 function applyAuthUI() {
   const strip = document.querySelector('.demo-top-strip');
-  if (_authSession) {
-    // Signed in: swap body class from demo-mode to signed-in, undo demo UI
+  document.body.classList.remove('signed-in');
+  document.body.classList.remove('trial-expired');
+
+  if (!_authSession) return;
+
+  if (_authIsActive()) {
+    // Active trial or subscription — full access
+    _isDemo = false;
     document.body.classList.remove('demo-mode');
     document.body.classList.add('signed-in');
     const dh = document.getElementById('demo-hero');
@@ -7168,9 +7200,14 @@ function applyAuthUI() {
       el.disabled = false;
     });
     if (strip) {
+      const days = _daysLeftInTrial();
+      const trialBadge = (_authUserRow?.subscription_status === 'trialing' && days !== null)
+        ? `<span class="trial-badge">${days} day${days === 1 ? '' : 's'} left in trial</span>`
+        : '';
       strip.innerHTML = `
         <div class="demo-top-strip-left">
           <span>Signed in as <strong>${_authSession.user.email}</strong></span>
+          ${trialBadge}
         </div>
         <div class="demo-top-strip-right">
           <button onclick="logout()">Log out</button>
@@ -7178,7 +7215,24 @@ function applyAuthUI() {
     }
     closeAuthModal();
   } else {
-    document.body.classList.remove('signed-in');
+    // Signed in but trial expired (or subscription canceled / past_due) — lock sync
+    _isDemo = true;
+    document.body.classList.add('trial-expired');
+    document.body.classList.remove('demo-mode'); // not a demo visitor; don't show demo hero
+    const dh = document.getElementById('demo-hero');
+    if (dh) dh.style.display = 'none';
+    applyDemoSyncGates();
+    if (strip) {
+      strip.innerHTML = `
+        <div class="demo-top-strip-left">
+          <span>Your 14-day trial has ended. Subscribe to keep cloud sync.</span>
+        </div>
+        <div class="demo-top-strip-right">
+          <button class="primary" onclick="openPricingModal()">Subscribe</button>
+          <button onclick="logout()">Log out</button>
+        </div>`;
+    }
+    closeAuthModal();
   }
 }
 
