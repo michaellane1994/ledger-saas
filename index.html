@@ -7147,8 +7147,18 @@ async function refreshAuthState() {
 function applyAuthUI() {
   const strip = document.querySelector('.demo-top-strip');
   if (_authSession) {
-    // Signed in: hide demo-mode UI, swap top-strip to account controls
+    // Signed in: undo any demo-mode UI that may have been applied inline
     document.body.classList.remove('demo-mode');
+    const dh = document.getElementById('demo-hero');
+    if (dh) dh.style.display = 'none';
+    const wb = document.getElementById('welcome-banner');
+    const welcomed = localStorage.getItem('lt_welcomed') === '1';
+    if (wb) wb.style.display = welcomed ? 'none' : '';
+    document.querySelectorAll('.demo-disabled').forEach(el => el.classList.remove('demo-disabled'));
+    document.querySelectorAll('.demo-locked-input').forEach(el => {
+      el.classList.remove('demo-locked-input');
+      el.disabled = false;
+    });
     if (strip) {
       strip.innerHTML = `
         <div class="demo-top-strip-left">
@@ -7157,19 +7167,16 @@ function applyAuthUI() {
         <div class="demo-top-strip-right">
           <button onclick="logout()">Log out</button>
         </div>`;
+      strip.style.background = 'var(--bg)';
     }
-    // If user landed here from a magic-link redirect, close the auth modal
     closeAuthModal();
   }
 }
 
-// React to sign-in / sign-out / token refresh
+// React to sign-in / sign-out / token refresh — no reloads (Supabase fires
+// SIGNED_IN on every page load, so reloading here creates an infinite loop).
 sb.auth.onAuthStateChange((event, session) => {
-  if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-    // First sign-in: reload so the demo-mode init short-circuits cleanly.
-    if (!_authSession && session) { location.reload(); return; }
-    refreshAuthState();
-  } else if (event === 'SIGNED_OUT') {
+  if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'SIGNED_OUT' || event === 'INITIAL_SESSION') {
     refreshAuthState();
   }
 });
