@@ -1447,7 +1447,7 @@ tbody tr:hover .row-menu-btn{opacity:1;}
         <button id="plan-yearly" onclick="setPricingPlan('yearly')" style="padding:6px 16px;border:none;border-radius:100px;background:transparent;color:var(--muted);font-size:12.5px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif;">Yearly <span style="background:#2d6a4f;color:#fff;padding:1px 6px;border-radius:100px;font-size:10px;margin-left:3px;">Save 18%</span></button>
       </div>
       <div style="margin-bottom:20px;">
-        <div id="pricing-amount" style="font-family:'Playfair Display',serif;font-size:40px;color:var(--ink);line-height:1;">$5<span style="font-size:15px;color:var(--muted);font-family:'Inter',sans-serif;font-weight:400;"> / month</span></div>
+        <div id="pricing-amount" style="font-family:'Playfair Display',serif;font-size:40px;color:var(--ink);line-height:1;">$9<span style="font-size:15px;color:var(--muted);font-family:'Inter',sans-serif;font-weight:400;"> / month</span></div>
         <div id="pricing-sub" style="font-size:12px;color:var(--faint);margin-top:5px;">Billed monthly after trial. Cancel anytime.</div>
       </div>
       <ul style="list-style:none;padding:0;margin:0 0 22px 0;display:flex;flex-direction:column;gap:9px;">
@@ -7183,24 +7183,88 @@ function setPricingPlan(plan) {
   const mBtn = document.getElementById('plan-monthly');
   const yBtn = document.getElementById('plan-yearly');
   if (plan === 'yearly') {
-    if (amount) amount.innerHTML = '$49<span style="font-size:15px;color:var(--muted);font-family:\'Inter\',sans-serif;font-weight:400;"> / year</span>';
-    if (sub) sub.textContent = 'Billed yearly after trial ($4.08/mo equivalent). Cancel anytime.';
+    if (amount) amount.innerHTML = '$89<span style="font-size:15px;color:var(--muted);font-family:\'Inter\',sans-serif;font-weight:400;"> / year</span>';
+    if (sub) sub.textContent = 'Billed yearly after trial ($7.42/mo equivalent — save 17%). Cancel anytime.';
     if (mBtn) { mBtn.style.background = 'transparent'; mBtn.style.color = 'var(--muted)'; mBtn.style.boxShadow = 'none'; mBtn.style.fontWeight = '500'; }
     if (yBtn) { yBtn.style.background = 'var(--surface)'; yBtn.style.color = 'var(--ink)'; yBtn.style.boxShadow = 'var(--shadow)'; yBtn.style.fontWeight = '600'; }
   } else {
-    if (amount) amount.innerHTML = '$5<span style="font-size:15px;color:var(--muted);font-family:\'Inter\',sans-serif;font-weight:400;"> / month</span>';
+    if (amount) amount.innerHTML = '$9<span style="font-size:15px;color:var(--muted);font-family:\'Inter\',sans-serif;font-weight:400;"> / month</span>';
     if (sub) sub.textContent = 'Billed monthly after trial. Cancel anytime.';
     if (mBtn) { mBtn.style.background = 'var(--surface)'; mBtn.style.color = 'var(--ink)'; mBtn.style.boxShadow = 'var(--shadow)'; mBtn.style.fontWeight = '600'; }
     if (yBtn) { yBtn.style.background = 'transparent'; yBtn.style.color = 'var(--muted)'; yBtn.style.boxShadow = 'none'; yBtn.style.fontWeight = '500'; }
   }
 }
 function startTrialFlow() {
-  closePricingModal();
-  openAuthModal('signup');
+  // If signed in, jump straight to Stripe checkout for the selected plan.
+  // Otherwise, open auth modal — we'll prompt for checkout after they sign in.
+  if (_authSession) {
+    closePricingModal();
+    startCheckout(_pricingPlan || 'monthly');
+  } else {
+    closePricingModal();
+    openAuthModal('signup');
+  }
 }
 function startLoginFlow() {
   closePricingModal();
   openAuthModal('login');
+}
+
+// ── STRIPE CHECKOUT + PORTAL ──
+const STRIPE_PRICE_IDS = {
+  monthly: 'price_1TPzDqBo3t6OY2ICaaC1KtDK',
+  yearly:  'price_1TPzEIBo3t6OY2ICBOBW8cYb',
+};
+
+async function startCheckout(plan) {
+  const priceId = STRIPE_PRICE_IDS[plan];
+  if (!priceId) { showToast('Invalid plan'); return; }
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    openAuthModal('signup');
+    return;
+  }
+  showToast('Redirecting to Stripe checkout...');
+  try {
+    const res = await fetch('/api/create-checkout-session', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ priceId }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showToast('Checkout failed: ' + (err.error || res.status));
+      return;
+    }
+    const { url } = await res.json();
+    location.href = url;
+  } catch (e) {
+    showToast('Network error: ' + e.message);
+  }
+}
+
+async function openCustomerPortal() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return;
+  showToast('Opening Stripe customer portal...');
+  try {
+    const res = await fetch('/api/create-portal-session', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${session.access_token}` },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showToast('Portal failed: ' + (err.error || res.status));
+      return;
+    }
+    const { url } = await res.json();
+    location.href = url;
+  } catch (e) {
+    showToast('Network error: ' + e.message);
+  }
 }
 
 // ── SUPABASE AUTH ──
@@ -7315,16 +7379,20 @@ function applyAuthUI() {
     });
     if (strip) {
       const days = _daysLeftInTrial();
-      const trialBadge = (_authUserRow?.subscription_status === 'trialing' && days !== null)
+      const status = _authUserRow?.subscription_status;
+      const trialBadge = (status === 'trialing' && days !== null)
         ? `<span class="trial-badge">${days} day${days === 1 ? '' : 's'} left in trial</span>`
-        : '';
+        : (status === 'active' ? `<span class="trial-badge">Active</span>` : '');
+      const rightButtons = (status === 'active' || _authUserRow?.stripe_customer_id)
+        ? `<button onclick="openCustomerPortal()">Manage subscription</button><button onclick="logout()">Log out</button>`
+        : `<button class="primary" onclick="openPricingModal()">Subscribe</button><button onclick="logout()">Log out</button>`;
       strip.innerHTML = `
         <div class="demo-top-strip-left">
           <span>Signed in as <strong>${_authSession.user.email}</strong></span>
           ${trialBadge}
         </div>
         <div class="demo-top-strip-right">
-          <button onclick="logout()">Log out</button>
+          ${rightButtons}
         </div>`;
     }
     closeAuthModal();
@@ -7360,6 +7428,22 @@ sb.auth.onAuthStateChange((event, session) => {
 
 // Kick off on load
 refreshAuthState();
+
+// If user just returned from Stripe checkout, refresh again after a delay
+// (give the webhook a moment to update Supabase) and clean the URL.
+(function handleStripeReturn() {
+  const params = new URLSearchParams(location.search);
+  if (params.get('subscribed') === '1') {
+    setTimeout(() => {
+      refreshAuthState();
+      if (typeof showToast === 'function') showToast('Subscription active. Welcome aboard.');
+    }, 1800);
+    history.replaceState({}, '', location.pathname);
+  } else if (params.get('subscribed') === '0') {
+    if (typeof showToast === 'function') setTimeout(() => showToast('Checkout cancelled.'), 200);
+    history.replaceState({}, '', location.pathname);
+  }
+})();
 document.addEventListener('click', (e) => {
   const m = document.getElementById('pricing-modal');
   if (m && m.classList.contains('open') && e.target === m) closePricingModal();

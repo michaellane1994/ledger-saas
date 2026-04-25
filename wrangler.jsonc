@@ -1,8 +1,10 @@
 {
   "name": "ledger-saas",
   "compatibility_date": "2026-04-24",
+  "main": "src/worker.js",
   "assets": {
-    "directory": "./",
+    "directory": "./public",
+    "binding": "ASSETS",
     "not_found_handling": "single-page-application"
   }
 }
