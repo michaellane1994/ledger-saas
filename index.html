@@ -1774,21 +1774,26 @@ tbody tr:hover .row-menu-btn{opacity:1;}
 
     <!-- Step 2: Parsed transactions review -->
     <div id="pdf-step-2" style="display:none;">
-      <div style="margin-bottom:10px;font-size:12.5px;color:var(--muted);" id="pdf-parse-summary"></div>
-      <div style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap;">
+        <div style="font-size:12.5px;color:var(--muted);" id="pdf-parse-summary"></div>
+        <button class="btn btn-ghost btn-sm" onclick="resetPdfEdits()" id="pdf-reset-edits-btn" style="display:none;font-size:11px;padding:3px 9px;">Reset edits</button>
+      </div>
+      <div style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);">
         <table style="width:100%;border-collapse:collapse;">
           <thead>
-            <tr style="background:var(--bg);">
-              <th style="padding:8px 12px;text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);">Date</th>
-              <th style="padding:8px 12px;text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);">Description</th>
-              <th style="padding:8px 12px;text-align:right;font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);">Amount</th>
+            <tr style="background:var(--bg);position:sticky;top:0;z-index:1;">
+              <th style="padding:7px 10px;text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);">Date</th>
+              <th style="padding:7px 10px;text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);">Merchant</th>
+              <th style="padding:7px 10px;text-align:right;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);">Amount</th>
+              <th style="padding:7px 10px;text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);">Category</th>
+              <th style="padding:7px 6px;text-align:center;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);width:36px;"></th>
             </tr>
           </thead>
           <tbody id="pdf-parsed-rows"></tbody>
         </table>
       </div>
       <div id="pdf-totals" style="display:flex;gap:20px;justify-content:flex-end;margin-top:10px;padding:10px 14px;background:var(--bg);border-radius:var(--radius-sm);font-size:12.5px;"></div>
-      <div style="margin-top:8px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;"><span>✓</span><span>Does this match your statement? If not, click Back and try re-extracting, or export a CSV from your bank instead.</span></div>
+      <div style="margin-top:8px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;"><span>✓</span><span>Click any cell to edit. Use × to drop a row. Totals update as you change rows.</span></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
         <button class="btn btn-ghost" onclick="document.getElementById('pdf-step-1').style.display='block';document.getElementById('pdf-step-2').style.display='none';">← Back</button>
         <button class="btn btn-ghost" onclick="closePdfModal()">Cancel</button>
@@ -5809,27 +5814,83 @@ function parsePdfTransactions() {
   // Show preview
   document.getElementById('pdf-step-1').style.display = 'none';
   document.getElementById('pdf-step-2').style.display = 'block';
-  document.getElementById('pdf-parse-summary').textContent =
-    `Found ${txns.length} transaction${txns.length !== 1 ? 's' : ''}. Review below then click Import.`;
+  // Snapshot original parse so user can reset edits
+  _pdfOriginalParsed = txns.map(t => ({ ...t }));
+  _pdfEdited = false;
+  renderPdfPreview();
+}
 
+let _pdfOriginalParsed = [];
+let _pdfEdited = false;
+
+function renderPdfPreview() {
   const tbody = document.getElementById('pdf-parsed-rows');
-  if (!txns.length) {
-    tbody.innerHTML = '<tr><td colspan="3" style="padding:20px;text-align:center;color:var(--faint);">No transactions found. The PDF format may not be supported — try downloading a CSV instead.</td></tr>';
+  const summary = document.getElementById('pdf-parse-summary');
+  if (summary) summary.textContent = `${pdfParsedTxns.length} transaction${pdfParsedTxns.length !== 1 ? 's' : ''} ready to import. Review below.`;
+  if (!pdfParsedTxns.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--faint);">No transactions found. The PDF format may not be supported — try downloading a CSV instead.</td></tr>';
+    document.getElementById('pdf-totals').innerHTML = '';
+    const r = document.getElementById('pdf-reset-edits-btn'); if (r) r.style.display = 'none';
     return;
   }
-  tbody.innerHTML = txns.map(t => `<tr style="border-bottom:1px solid var(--border);">
-    <td style="padding:8px 12px;font-size:12px;color:var(--faint);white-space:nowrap;">${t.date}</td>
-    <td style="padding:8px 12px;font-size:13px;">${esc(t.merchant)}</td>
-    <td style="padding:8px 12px;text-align:right;font-weight:600;font-size:13px;" ${t.amount<0?'class="clr-credit"':''}>${t.amount<0?'-':''}${fmt(Math.abs(t.amount))}</td>
-  </tr>`).join('');
+  tbody.innerHTML = pdfParsedTxns.map((t, i) => {
+    const amtAbs = Math.abs(t.amount);
+    const amtColor = t.amount < 0 ? 'color:#16a34a;' : '';
+    const sign = t.amount < 0 ? '-' : '';
+    const catSelected = CATS.some(c => c.key === t.category) ? t.category : 'misc';
+    const catSelect = CATS.map(c => `<option value="${esc(c.key)}" ${c.key === catSelected ? 'selected' : ''}>${esc(c.label)}</option>`).join('');
+    return `<tr data-row-idx="${i}" style="border-bottom:1px solid var(--border);">
+      <td style="padding:3px 6px;"><input type="date" value="${esc(t.date)}" onchange="editPdfRow(${i},'date',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);width:112px;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
+      <td style="padding:3px 6px;"><input type="text" value="${esc(t.merchant)}" oninput="editPdfRow(${i},'merchant',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12px;color:var(--ink);width:100%;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
+      <td style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editPdfRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
+      <td style="padding:3px 6px;"><select onchange="editPdfRow(${i},'category',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);font-family:inherit;cursor:pointer;outline:none;max-width:140px;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';">${catSelect}</select></td>
+      <td style="padding:3px 4px;text-align:center;"><button onclick="deletePdfRow(${i})" title="Drop this row" style="background:transparent;border:none;color:var(--faint);cursor:pointer;padding:4px 7px;border-radius:4px;font-size:14px;line-height:1;" onmouseover="this.style.color='#c15c1e';this.style.background='var(--bg)';" onmouseout="this.style.color='var(--faint)';this.style.background='transparent';">×</button></td>
+    </tr>`;
+  }).join('');
 
-  const charges = txns.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
-  const credits  = txns.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0);
+  const charges = pdfParsedTxns.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
+  const credits = pdfParsedTxns.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0);
   const totalsEl = document.getElementById('pdf-totals');
   totalsEl.innerHTML = `
     <span style="color:var(--muted);">Charges <strong style="color:var(--ink);margin-left:4px;">${fmt(charges)}</strong></span>
     ${credits < 0 ? `<span style="color:var(--muted);">Credits <strong class="clr-credit" style="margin-left:4px;">-${fmt(Math.abs(credits))}</strong></span>` : ''}
     <span style="color:var(--muted);">Net <strong style="color:var(--ink);margin-left:4px;">${fmt(charges + credits)}</strong></span>`;
+  const resetBtn = document.getElementById('pdf-reset-edits-btn');
+  if (resetBtn) resetBtn.style.display = _pdfEdited ? '' : 'none';
+}
+
+function editPdfRow(idx, field, value) {
+  if (!pdfParsedTxns[idx]) return;
+  const row = pdfParsedTxns[idx];
+  if (field === 'amount') {
+    const n = parseFloat(value);
+    if (!isFinite(n)) return;
+    // Preserve refund sign convention
+    row.amount = (row.amount < 0 || row.refund) ? -Math.abs(n) : Math.abs(n);
+    row.refund = row.amount < 0;
+  } else if (field === 'merchant') {
+    row.merchant = value;
+    if (!row._catManual) row.category = autoCat(value);
+  } else if (field === 'category') {
+    row.category = value;
+    row._catManual = true;
+  } else if (field === 'date') {
+    row.date = value;
+  }
+  _pdfEdited = true;
+  renderPdfPreview();
+}
+
+function deletePdfRow(idx) {
+  pdfParsedTxns.splice(idx, 1);
+  _pdfEdited = true;
+  renderPdfPreview();
+}
+
+function resetPdfEdits() {
+  pdfParsedTxns = _pdfOriginalParsed.map(t => ({ ...t }));
+  _pdfEdited = false;
+  renderPdfPreview();
 }
 
 async function importPdfTransactions() {
