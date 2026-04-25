@@ -5317,6 +5317,7 @@ async function gdPush() {
     setSyncLabel('Pushing...');
     showGdStatus('Pushing...', 'busy');
     const payload = {
+      version: 1,
       txns, learned, incomes, savAccts, contribs,
       cats: CATS, uploads, trash,
       settings: { commitExcludedCats: [...commitExcludedCats], mortBalances, mortVoluntaryPmts, mortData },
