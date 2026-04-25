@@ -340,6 +340,9 @@ tbody td{padding:10px 15px;font-size:13.5px;vertical-align:middle;}
 .txn-note{font-size:11px;color:var(--faint);cursor:text;padding:2px 5px;border-radius:4px;border:1px solid transparent;outline:none;min-width:50px;display:inline-block;}
 .txn-note:hover{border-color:var(--border);}
 .txn-note:focus{border-color:var(--accent);color:var(--ink);}
+.txn-edit-text{outline:none;cursor:text;border-bottom:1px dashed transparent;padding:0 2px;border-radius:3px;}
+.txn-edit-text:hover{border-bottom-color:var(--border);}
+.txn-edit-text:focus{border-bottom-color:var(--accent);background:var(--bg);}
 .del-btn{background:none;border:none;cursor:pointer;color:var(--faint);padding:4px 6px;border-radius:4px;font-size:14px;line-height:1;transition:all .15s;opacity:0;}
 tbody tr:hover .del-btn{opacity:1;}
 .del-btn.always-on{opacity:1 !important;}
@@ -1051,15 +1054,13 @@ tbody tr:hover .row-menu-btn{opacity:1;}
             Add Income
           </button>
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center;">
-          <input type="text" id="inc-search" placeholder="Search description..." oninput="renderIncome()"
-            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink);min-width:180px;flex:1;">
+        <div class="filter-bar">
+          <input type="text" id="inc-search" placeholder="Search description..." oninput="renderIncome()">
           <div class="ms-wrap" id="ms-inc-type">
             <button class="ms-btn" id="ms-inc-type-btn" onclick="openMs(event,'ms-inc-type')">All types</button>
             <div class="ms-drop" id="ms-inc-type-drop"></div>
           </div>
-          <select id="inc-person" onchange="incPersonFilter=this.value;renderIncome();"
-            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Inter',sans-serif;background:var(--surface);color:var(--ink);cursor:pointer;">
+          <select id="inc-person" onchange="incPersonFilter=this.value;renderIncome();">
             <option value="">All people</option>
           </select>
           <div class="ms-wrap" id="ms-inc-month">
@@ -3411,13 +3412,14 @@ function renderTxns() {
   tbody.innerHTML = list.map(t => {
     const c = CAT[t.category] || CAT.misc;
     const isRefund = t.refund || t.amount < 0;
+    const amtEditable = `<span class="txn-edit-text" contenteditable="true" onblur="saveTxnAmount('${t.id}',this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${fmt(Math.abs(t.amount))}</span>`;
     const amtDisplay = isRefund
-      ? `<span class="clr-credit" style="font-weight:600;">−${fmt(Math.abs(t.amount))}</span>`
+      ? `<span class="clr-credit" style="font-weight:600;">−${amtEditable}</span>`
       : t.incomeType
-      ? `<span class="clr-credit" style="font-weight:600;">−${fmt(Math.abs(t.amount))}</span>`
+      ? `<span class="clr-credit" style="font-weight:600;">−${amtEditable}</span>`
       : t.savingsAccountId
-      ? `<span style="font-weight:600;color:var(--muted);">${fmt(t.amount)}</span>`
-      : `<span style="font-weight:600;">${fmt(t.amount)}</span>`;
+      ? `<span style="font-weight:600;color:var(--muted);">${amtEditable}</span>`
+      : `<span style="font-weight:600;">${amtEditable}</span>`;
     const isIncome  = !!t.incomeType;
     const isSavings = !!t.savingsAccountId;
     const savAcct   = isSavings ? savAccts.find(a => a.id === t.savingsAccountId) : null;
@@ -3437,7 +3439,7 @@ function renderTxns() {
       : `<button class="cat-badge" style="background:${c.bg};color:${c.color};" onclick="openDD(event,'${t.id}')"><span class="cat-badge-dot" style="background:${c.color};"></span>${c.label} ▾</button>`;
     return `<tr class="${isRefund ? 'refund-row' : ''}">
       <td class="txn-td-date" style="width:100px;"><input type="date" class="txn-date-input" value="${t.date}" onchange="saveTxnDate('${t.id}',this.value)"></td>
-      <td class="txn-td-merchant" style="font-weight:500;">${esc(t.merchant)}</td>
+      <td class="txn-td-merchant" style="font-weight:500;"><span class="txn-edit-text" contenteditable="true" onblur="saveTxnMerchant('${t.id}',this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${esc(t.merchant)}</span></td>
       <td class="txn-td-cat" style="position:relative;"><span class="txn-date-mob">${t.date ? t.date.slice(5).replace('-','/') : ''}</span>${catCell}</td>
       <td class="hide-mobile"><select onchange="savePerson('${t.id}',this.value)" style="border:none;background:transparent;font-size:13px;font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;outline:none;padding:2px 4px;border-radius:4px;">
         ${people.map(p => `<option value="${esc(p.name)}" ${t.person===p.name?'selected':''}>${esc(p.name)}</option>`).join('')}
@@ -3729,12 +3731,51 @@ function saveCard(id, val) {
   const t = txns.find(x => x.id === id);
   if (t) { t.card = val; persist(); autoPush(); }
 }
+function saveTxnMerchant(id, raw) {
+  const t = txns.find(x => x.id === id);
+  if (!t) return;
+  const val = (raw || '').trim();
+  if (!val) { renderTxns(); return; }
+  if (t.merchant === val) return;
+  t.merchant = val;
+  // Cascade to linked income row description
+  const inc = incomes.find(i => i.fromTxnId === id);
+  if (inc) inc.desc = val;
+  persist();
+  if (typeof renderIncome === 'function') renderIncome();
+  autoPush();
+}
+function saveTxnAmount(id, raw) {
+  const t = txns.find(x => x.id === id);
+  if (!t) return;
+  const cleaned = String(raw || '').replace(/[^\d.\-]/g, '');
+  const val = parseFloat(cleaned);
+  if (isNaN(val)) { renderTxns(); return; }
+  // Preserve sign convention: refunds stored negative, others positive
+  const newAmt = t.refund ? -Math.abs(val) : Math.abs(val);
+  if (t.amount === newAmt) return;
+  t.amount = newAmt;
+  // Cascade amount to linked income or contribution row
+  const inc = incomes.find(i => i.fromTxnId === id);
+  if (inc) inc.amount = Math.abs(val);
+  const contrib = contribs.find(c => c.fromTxnId === id);
+  if (contrib) contrib.amount = Math.abs(val);
+  recalcAllBalances();
+  persist();
+  renderTxns();
+  if (typeof renderIncome === 'function') renderIncome();
+  if (typeof renderSavings === 'function') renderSavings();
+  renderDashboard();
+  autoPush();
+}
 
 function deleteTxn(id) {
   const t = txns.find(x => x.id === id);
   if (t) {
     trash.push({ ...t, deletedAt: new Date().toISOString() });
     txns = txns.filter(x => x.id !== id);
+    // Cascade: remove any income row linked to this txn
+    incomes = incomes.filter(i => i.fromTxnId !== id);
     // Prune trash older than 30 days
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 30);
@@ -3742,6 +3783,7 @@ function deleteTxn(id) {
   }
   persist();
   renderTxns();
+  if (typeof renderIncome === 'function') renderIncome();
   renderDashboard();
   autoPush();
 }
@@ -3971,16 +4013,18 @@ function renderImportPreview() {
     document.getElementById('import-preview-footer').innerHTML = '';
     return;
   }
+  const catOptions = CATS.map(c => `<option value="${esc(c.key)}">${esc(c.label)}</option>`).join('');
   body.innerHTML = rows.map((t, i) => {
-    const catLabel = (CAT[t.category] && CAT[t.category].label) || t.category || '—';
     const amtAbs = Math.abs(t.amount);
     const amtColor = t.refund ? 'color:#16a34a;' : '';
     const sign = t.refund ? '-' : '';
+    const catSelected = CATS.some(c => c.key === t.category) ? t.category : 'misc';
+    const catSelect = CATS.map(c => `<option value="${esc(c.key)}" ${c.key === catSelected ? 'selected' : ''}>${esc(c.label)}</option>`).join('');
     return `<tr data-row-idx="${i}" style="border-bottom:1px solid var(--border);">
       <td style="padding:3px 6px;"><input type="date" value="${esc(t.date)}" onchange="editImportRow(${i},'date',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);width:112px;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td style="padding:3px 6px;"><input type="text" value="${esc(t.merchant)}" oninput="editImportRow(${i},'merchant',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 6px;font-size:12px;color:var(--ink);width:100%;font-family:inherit;cursor:text;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
       <td style="padding:3px 6px;text-align:right;"><span style="${amtColor}font-weight:600;font-size:11.5px;">${sign}</span><input type="number" step="0.01" value="${amtAbs.toFixed(2)}" onchange="editImportRow(${i},'amount',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:12px;text-align:right;color:var(--ink);width:74px;font-weight:600;font-family:inherit;cursor:text;${amtColor}" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';"></td>
-      <td style="padding:3px 6px;font-size:11.5px;color:var(--muted);">${esc(catLabel)}</td>
+      <td style="padding:3px 6px;"><select onchange="editImportRow(${i},'category',this.value)" style="background:transparent;border:1px solid transparent;border-radius:4px;padding:3px 5px;font-size:11.5px;color:var(--ink);font-family:inherit;cursor:pointer;outline:none;max-width:140px;" onfocus="this.style.borderColor='var(--border)';this.style.background='var(--bg)';" onblur="this.style.borderColor='transparent';this.style.background='transparent';">${catSelect}</select></td>
       <td style="padding:3px 4px;text-align:center;"><button onclick="deleteImportRow(${i})" title="Drop this row" style="background:transparent;border:none;color:var(--faint);cursor:pointer;padding:4px 7px;border-radius:4px;font-size:14px;line-height:1;" onmouseover="this.style.color='#c15c1e';this.style.background='var(--bg)';" onmouseout="this.style.color='var(--faint)';this.style.background='transparent';">×</button></td>
     </tr>`;
   }).join('');
@@ -4011,7 +4055,10 @@ function editImportRow(idx, field, value) {
     row.amount = row.refund ? -Math.abs(n) : Math.abs(n);
   } else if (field === 'merchant') {
     row.merchant = value;
-    row.category = autoCat(value);
+    if (!row._catManual) row.category = autoCat(value);
+  } else if (field === 'category') {
+    row.category = value;
+    row._catManual = true;
   } else if (field === 'date') {
     row.date = value;
   }
@@ -4454,8 +4501,12 @@ document.addEventListener('click', closeRowMenus);
 function deleteIncome(id) {
   const inc = incomes.find(x => x.id === id);
   if (inc?.fromTxnId) {
+    // Cascade: remove the linked transaction (move to trash)
     const t = txns.find(x => x.id === inc.fromTxnId);
-    if (t?.manualIncome) txns = txns.filter(x => x.id !== inc.fromTxnId);
+    if (t) {
+      trash.push({ ...t, deletedAt: new Date().toISOString() });
+      txns = txns.filter(x => x.id !== inc.fromTxnId);
+    }
   }
   incomes = incomes.filter(x => x.id !== id);
   persist(); renderIncome(); renderDashboard(); renderTxns(); autoPush();
