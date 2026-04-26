@@ -948,6 +948,11 @@ tbody tr:hover .row-menu-btn{opacity:1;}
                 style="font-size:11px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;outline:none;"></select>
             </div>
             <button id="cf-bonus-btn" class="btn btn-ghost btn-sm" onclick="toggleCfBonus()" style="font-size:11px;padding:2px 8px;">Bonus: on</button>
+            <div class="ms-wrap" id="ms-cf-excl" style="position:relative;">
+              <button class="ms-btn" id="ms-cf-excl-btn" onclick="openMs(event,'ms-cf-excl')"
+                style="font-size:11px;padding:2px 22px 2px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--ink);font-family:'Inter',sans-serif;cursor:pointer;outline:none;height:22px;">Exclude categories</button>
+              <div class="ms-drop" id="ms-cf-excl-drop"></div>
+            </div>
           </div>
         </div>
         <div class="card-body" style="padding-bottom:16px;"><canvas id="cashflowChart"></canvas></div>
@@ -2574,6 +2579,9 @@ function renderCashflowChart() {
   const hasBonus = incomes.some(i => i.type === 'bonus' && i.amount);
   const cfBonusBtn = document.getElementById('cf-bonus-btn');
   if (cfBonusBtn) cfBonusBtn.style.display = hasBonus ? '' : 'none';
+
+  // Rebuild the Exclude-categories multi-select dropdown
+  buildCfExclDrop();
 
   const fixedByMonth = {};
   const discByMonth  = {};
@@ -5019,6 +5027,25 @@ function toggleCfExcl(key, excluded) {
   autoPush();
 }
 
+// Multi-select dropdown variant: rebuild via renderCashflow each render.
+function buildCfExclDrop() {
+  const drop = document.getElementById('ms-cf-excl-drop');
+  if (!drop) return;
+  drop.innerHTML = CATS.map(c => {
+    const v = c.key.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<label class="ms-opt" onclick="event.stopPropagation()"><input type="checkbox" ${cfExcludedCats.has(c.key) ? 'checked' : ''} onchange="toggleCfExcl('${v}', this.checked)"><span class="ms-check"></span><span>${esc(c.label)}</span></label>`;
+  }).join('');
+  const btn = document.getElementById('ms-cf-excl-btn');
+  if (!btn) return;
+  if (cfExcludedCats.size === 0) {
+    btn.textContent = 'Exclude categories';
+    btn.classList.remove('has-filter');
+  } else {
+    btn.textContent = cfExcludedCats.size + ' excluded';
+    btn.classList.add('has-filter');
+  }
+}
+
 // ── CATEGORY MANAGEMENT ──────────────────────────────────
 function renderCatManagement() {
   const el = document.getElementById('cat-management-list');
@@ -5050,11 +5077,6 @@ function renderCatManagement() {
           <input type="checkbox" ${commitExcludedCats.has(c.key) ? 'checked' : ''}
             onchange="toggleCommitExcl('${c.key}',this.checked);">
           <span>Exclude from Commitments</span>
-        </label>
-        <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap;cursor:pointer;" title="Exclude from Cashflow Forecast">
-          <input type="checkbox" ${cfExcludedCats.has(c.key) ? 'checked' : ''}
-            onchange="toggleCfExcl('${c.key}',this.checked);">
-          <span>Exclude from Forecast</span>
         </label>
         <div style="display:flex;gap:2px;">
           <button class="btn btn-ghost btn-sm" onclick="moveCat(${idx},-1)" title="Move up" ${idx===0?'disabled':''} style="padding:2px 6px;">↑</button>
