@@ -2181,6 +2181,8 @@ let cfBonusVisible   = true;
 let cfStartBalance   = parseFloat(localStorage.getItem('lt_cf_start') || '0');
 const _commitExclRaw = localStorage.getItem('lt_commit_excl');
 let commitExcludedCats = new Set(_commitExclRaw !== null ? JSON.parse(_commitExclRaw) : ['home']);
+const _cfExclRaw = localStorage.getItem('lt_cf_excluded_cats');
+let cfExcludedCats = new Set(_cfExclRaw !== null ? JSON.parse(_cfExclRaw) : []);
 let cfFromMonth      = localStorage.getItem('lt_cf_from')      || '';
 let cfToMonth        = localStorage.getItem('lt_cf_to')        || '';
 let cfAvgFrom        = localStorage.getItem('lt_cf_avg_from')  || '';
@@ -2578,6 +2580,8 @@ function renderCashflowChart() {
   txns.filter(t => t.incomeType === 'transfer' || (t.amount > 0 && !t.incomeType && !t.savingsAccountId)).forEach(t => {
     const m = t.date?.substring(0,7);
     if (!m) return;
+    // Skip categories the user has excluded from the cashflow forecast
+    if (cfExcludedCats.has(t.category)) return;
     if (t.incomeType === 'transfer') {
       discByMonth[m] = (discByMonth[m]||0) - Math.abs(t.amount);
     } else if (isNeeds(t)) {
@@ -5008,6 +5012,13 @@ function toggleCommitExcl(key, excluded) {
   renderDashboard();
 }
 
+function toggleCfExcl(key, excluded) {
+  if (excluded) cfExcludedCats.add(key); else cfExcludedCats.delete(key);
+  localStorage.setItem('lt_cf_excluded_cats', JSON.stringify([...cfExcludedCats]));
+  renderDashboard();
+  autoPush();
+}
+
 // ── CATEGORY MANAGEMENT ──────────────────────────────────
 function renderCatManagement() {
   const el = document.getElementById('cat-management-list');
@@ -5039,6 +5050,11 @@ function renderCatManagement() {
           <input type="checkbox" ${commitExcludedCats.has(c.key) ? 'checked' : ''}
             onchange="toggleCommitExcl('${c.key}',this.checked);">
           <span>Exclude from Commitments</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);white-space:nowrap;cursor:pointer;" title="Exclude from Cashflow Forecast">
+          <input type="checkbox" ${cfExcludedCats.has(c.key) ? 'checked' : ''}
+            onchange="toggleCfExcl('${c.key}',this.checked);">
+          <span>Exclude from Forecast</span>
         </label>
         <div style="display:flex;gap:2px;">
           <button class="btn btn-ghost btn-sm" onclick="moveCat(${idx},-1)" title="Move up" ${idx===0?'disabled':''} style="padding:2px 6px;">↑</button>
@@ -5320,7 +5336,7 @@ async function gdPush() {
       version: 1,
       txns, learned, incomes, savAccts, contribs,
       cats: CATS, uploads, trash,
-      settings: { commitExcludedCats: [...commitExcludedCats], mortBalances, mortVoluntaryPmts, mortData },
+      settings: { commitExcludedCats: [...commitExcludedCats], cfExcludedCats: [...cfExcludedCats], mortBalances, mortVoluntaryPmts, mortData },
       updatedAt: new Date().toISOString(),
     };
     const res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${gdFileId}?uploadType=media`, {
@@ -5386,6 +5402,10 @@ async function gdPull() {
       commitExcludedCats = new Set(data.settings.commitExcludedCats);
       localStorage.setItem('lt_commit_excl', JSON.stringify([...commitExcludedCats]));
       renderCommitExclusions();
+    }
+    if (data.settings?.cfExcludedCats) {
+      cfExcludedCats = new Set(data.settings.cfExcludedCats);
+      localStorage.setItem('lt_cf_excluded_cats', JSON.stringify([...cfExcludedCats]));
     }
     if (data.settings?.mortBalances) {
       mortBalances = data.settings.mortBalances;
