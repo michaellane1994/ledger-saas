@@ -21,10 +21,25 @@ export default {
     if (path === '/api/me' && request.method === 'GET') {
       return handleMe(request, env);
     }
+    if (path === '/api/diag' && request.method === 'GET') {
+      return handleDiag(env);
+    }
 
     return env.ASSETS.fetch(request);
   }
 };
+
+function handleDiag(env) {
+  // Reports which env vars are SET (without leaking values).
+  // Useful for verifying Cloudflare secret names match the code's expectations.
+  const required = ['SUPABASE_URL','SUPABASE_PUBLISHABLE_KEY','STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET'];
+  const supaSecretNames = ['SUPABASE_SERVICE_ROLE','SUPABASE_SECRET_KEY'];
+  const status = {};
+  required.forEach(n => { status[n] = !!env[n]; });
+  status['SUPABASE_SECRET (service_role OR secret_key)'] = supaSecretNames.some(n => !!env[n]);
+  status._supaSecretFoundUnder = supaSecretNames.find(n => !!env[n]) || null;
+  return json(status);
+}
 
 // ─── helpers ──────────────────────────────────────────────
 
@@ -78,6 +93,10 @@ async function updateUserRow(env, userId, patch) {
     method: 'PATCH',
     body: JSON.stringify(patch),
   });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    console.error('[updateUserRow] failed', res.status, body);
+  }
   return res.ok;
 }
 
@@ -241,8 +260,12 @@ async function fetchSubscription(env, subscriptionId) {
 
 async function applySubStatus(env, customerId, stripeStatus) {
   const userRow = await fetchUserRowByCustomer(env, customerId);
-  if (!userRow) return;
-  await updateUserRow(env, userRow.id, { subscription_status: mapStatus(stripeStatus) });
+  if (!userRow) {
+    console.error('[applySubStatus] no user row for customer', customerId);
+    return;
+  }
+  const ok = await updateUserRow(env, userRow.id, { subscription_status: mapStatus(stripeStatus) });
+  if (!ok) console.error('[applySubStatus] update failed for', userRow.id);
 }
 
 function mapStatus(stripeStatus) {
