@@ -50,8 +50,8 @@ async function supabaseAdmin(env, path, options = {}) {
     ...options,
     headers: {
       ...(options.headers || {}),
-      apikey: env.SUPABASE_SERVICE_ROLE,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+      apikey: env.SUPABASE_SERVICE_ROLE || env.SUPABASE_SECRET_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE || env.SUPABASE_SECRET_KEY}`,
       'Content-Type': 'application/json',
       Prefer: 'return=representation',
     },

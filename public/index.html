@@ -2181,7 +2181,7 @@ let timeChart;
 let cashflowChart;
 let fvIncomePlugin = null;
 let chartHiddenCats  = new Set();
-let chartViewMode    = 'category'; // 'category' | 'fixed-variable'
+let chartViewMode    = 'fixed-variable'; // 'category' | 'fixed-variable' — default to Needs vs Wants
 let cfBonusVisible   = true;
 let cfStartBalance   = parseFloat(localStorage.getItem('lt_cf_start') || '0');
 const _commitExclRaw = localStorage.getItem('lt_commit_excl');
@@ -2205,7 +2205,7 @@ let editingIncomeId = null;
 
 function resetChartFilters() {
   chartHiddenCats.clear();
-  chartViewMode = 'category';
+  chartViewMode = 'fixed-variable';
   const allExpenses = txns.filter(t => t.incomeType === 'transfer' || (t.amount > 0 && !t.incomeType && !t.savingsAccountId));
   const allMonths = [...new Set(allExpenses.map(t => t.date.substring(0,7)))].sort();
   const fromSel = document.getElementById('chart-from');
@@ -7426,9 +7426,15 @@ function applyAuthUI() {
       const trialBadge = (status === 'trialing' && days !== null)
         ? `<span class="trial-badge">${days} day${days === 1 ? '' : 's'} left in trial</span>`
         : (status === 'active' ? `<span class="trial-badge">Active</span>` : '');
-      const rightButtons = (status === 'active' || _authUserRow?.stripe_customer_id)
-        ? `<button onclick="openCustomerPortal()">Manage subscription</button><button onclick="logout()">Log out</button>`
-        : `<button class="primary" onclick="openPricingModal()">Subscribe</button><button onclick="logout()">Log out</button>`;
+      // Active subs see Manage subscription. Trialing users see both Subscribe (upgrade early) and Log out.
+      let rightButtons;
+      if (status === 'active') {
+        rightButtons = `<button onclick="openCustomerPortal()">Manage subscription</button><button onclick="logout()">Log out</button>`;
+      } else if (_authUserRow?.stripe_customer_id) {
+        rightButtons = `<button class="primary" onclick="openPricingModal()">Subscribe</button><button onclick="openCustomerPortal()">Manage</button><button onclick="logout()">Log out</button>`;
+      } else {
+        rightButtons = `<button class="primary" onclick="openPricingModal()">Subscribe</button><button onclick="logout()">Log out</button>`;
+      }
       strip.innerHTML = `
         <div class="demo-top-strip-left">
           <span>Signed in as <strong>${_authSession.user.email}</strong></span>
