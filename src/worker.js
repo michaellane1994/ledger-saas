@@ -32,12 +32,15 @@ export default {
 function handleDiag(env) {
   // Reports which env vars are SET (without leaking values).
   // Useful for verifying Cloudflare secret names match the code's expectations.
-  const required = ['SUPABASE_URL','SUPABASE_PUBLISHABLE_KEY','STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET'];
-  const supaSecretNames = ['SUPABASE_SERVICE_ROLE','SUPABASE_SECRET_KEY'];
+  const required = [
+    'SUPABASE_URL',
+    'SUPABASE_PUBLISHABLE_KEY',
+    'SUPABASE_SECRET_KEY',
+    'STRIPE_SECRET_KEY',
+    'STRIPE_WEBHOOK_SECRET',
+  ];
   const status = {};
   required.forEach(n => { status[n] = !!env[n]; });
-  status['SUPABASE_SECRET (service_role OR secret_key)'] = supaSecretNames.some(n => !!env[n]);
-  status._supaSecretFoundUnder = supaSecretNames.find(n => !!env[n]) || null;
   return json(status);
 }
 
@@ -65,8 +68,8 @@ async function supabaseAdmin(env, path, options = {}) {
     ...options,
     headers: {
       ...(options.headers || {}),
-      apikey: env.SUPABASE_SERVICE_ROLE || env.SUPABASE_SECRET_KEY,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE || env.SUPABASE_SECRET_KEY}`,
+      apikey: env.SUPABASE_SECRET_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SECRET_KEY}`,
       'Content-Type': 'application/json',
       Prefer: 'return=representation',
     },
