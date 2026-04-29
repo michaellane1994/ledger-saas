@@ -131,7 +131,7 @@ body.demo-mode .demo-pill-sidebar{display:inline-block;}
 .logo{padding:26px 22px 18px;border-bottom:1px solid rgba(255,255,255,.07);}
 .logo h1{font-family:'Playfair Display',serif;font-size:20px;color:#fff;}
 .logo span{font-size:11px;color:rgba(255,255,255,.3);letter-spacing:.6px;text-transform:uppercase;margin-top:2px;display:block;}
-.nav{padding:14px 10px;flex:1;}
+.nav{padding:14px 10px;flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;}
 .nav-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.25);padding:8px 12px 5px;font-weight:600;}
 .nav-item{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;color:rgba(255,255,255,.5);transition:all .15s;font-size:13px;margin-bottom:2px;user-select:none;}
 .nav-item:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.8);}
@@ -2315,11 +2315,11 @@ function renderChartSection() {
   let datasets;
   if (chartViewMode === 'fixed-variable') {
     const fixedData = filteredMonths.map(m =>
-      allExpenses.filter(t => t.date.startsWith(m) && isNeeds(t))
+      allExpenses.filter(t => t.date.startsWith(m) && isNeeds(t) && !chartHiddenCats.has(t.category))
                  .reduce((s, t) => s + (t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount), 0)
     );
     const varData = filteredMonths.map(m =>
-      allExpenses.filter(t => t.date.startsWith(m) && !isNeeds(t))
+      allExpenses.filter(t => t.date.startsWith(m) && !isNeeds(t) && !chartHiddenCats.has(t.category))
                  .reduce((s, t) => s + (t.incomeType === 'transfer' ? -Math.abs(t.amount) : t.amount), 0)
     );
     const incomeData = filteredMonths.map(m =>
