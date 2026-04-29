@@ -1,5 +1,5 @@
 {
-  "name": "ledger-saas",
+  "name": "ledger",
   "compatibility_date": "2026-04-24",
   "main": "src/worker.js",
   "assets": {
